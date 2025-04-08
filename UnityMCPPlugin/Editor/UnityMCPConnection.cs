@@ -23,7 +23,7 @@ namespace UnityMCP.Editor
         private static readonly Queue<LogEntry> logBuffer = new Queue<LogEntry>();
         private static readonly int maxLogBufferSize = 1000;
         private static bool isLoggingEnabled = true;
-    
+
         // Public properties for the debug window
         public static bool IsConnected => isConnected;
         public static Uri ServerUri => serverUri;
@@ -44,7 +44,7 @@ namespace UnityMCP.Editor
                 }
             }
         }
-    
+
         private class LogEntry
         {
             public string Message { get; set; }
@@ -158,13 +158,13 @@ namespace UnityMCP.Editor
                 Debug.Log($"[UnityMCP] Attempting to connect to MCP Server at {serverUri}");
                 Debug.Log($"[UnityMCP] Current Unity version: {Application.unityVersion}");
                 Debug.Log($"[UnityMCP] Current platform: {Application.platform}");
-                
+
                 webSocket = new ClientWebSocket();
                 webSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
-                
+
                 var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, timeout.Token);
-                
+
                 await webSocket.ConnectAsync(serverUri, linkedCts.Token);
                 isConnected = true;
                 Debug.Log("[UnityMCP] Successfully connected to MCP Server");
@@ -276,7 +276,7 @@ namespace UnityMCP.Editor
 
                 Debug.Log($"[UnityMCP] Executing batch of {batchObj.commands.Length} commands");
                 CSEditorHelper.ExecuteCommandBatch(batchObj.commands);
-                
+
                 // Send success response
                 var successMessage = JsonConvert.SerializeObject(new
                 {
@@ -293,7 +293,7 @@ namespace UnityMCP.Editor
             catch (Exception e)
             {
                 Debug.LogError($"[UnityMCP] Failed to execute command batch: {e.Message}");
-                
+
                 // Send error response
                 var errorMessage = JsonConvert.SerializeObject(new
                 {
@@ -456,7 +456,7 @@ namespace UnityMCP.Editor
             catch (Exception e)
             {
                 Debug.LogError($"[UnityMCP] Failed to create UdonSharp script: {e.Message}\n{e.StackTrace}");
-                
+
                 // Send error response
                 var errorMessage = JsonConvert.SerializeObject(new
                 {
@@ -485,15 +485,15 @@ namespace UnityMCP.Editor
             {
                 var commandObj = JsonConvert.DeserializeObject<EditorCommandData>(commandData);
                 var code = commandObj.code;
-                
-                Debug.Log($"[UnityMCP] Executing command:\n{code}");
-// Execute the code directly in the Editor context
-try
-{
-    // Execute the provided code
-    var result = CSEditorHelper.ExecuteCommand(code);
 
-    // Send back detailed execution results
+                Debug.Log($"[UnityMCP] Executing command:\n{code}");
+                // Execute the code directly in the Editor context
+                try
+                {
+                    // Execute the provided code
+                    var result = CSEditorHelper.ExecuteCommand(code);
+
+                    // Send back detailed execution results
                     // Send back detailed execution results
                     var resultMessage = JsonConvert.SerializeObject(new
                     {
@@ -519,7 +519,7 @@ try
             {
                 var error = $"[UnityMCP] Failed to execute editor command: {e.Message}\n{e.StackTrace}";
                 Debug.LogError(error);
-                
+
                 // Send back error information
                 var errorMessage = JsonConvert.SerializeObject(new
                 {
@@ -647,7 +647,7 @@ try
 
                 var currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
                 var sceneHierarchy = currentScene.IsValid() ? GetSceneHierarchy() : new List<object>();
-                
+
                 var projectStructure = new
                 {
                     scenes = GetSceneNames() ?? new string[0],
@@ -685,7 +685,7 @@ try
             {
                 var roots = new List<object>();
                 var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-                
+
                 if (scene.IsValid())
                 {
                     var rootObjects = scene.GetRootGameObjects();
@@ -707,7 +707,7 @@ try
                         }
                     }
                 }
-                
+
                 return roots;
             }
             catch (Exception e)
@@ -726,7 +726,7 @@ try
 
                 var children = new List<object>();
                 var transform = obj.transform;
-                
+
                 if (transform != null)
                 {
                     for (int i = 0; i < transform.childCount; i++)
@@ -840,7 +840,7 @@ try
             }
             return paths;
         }
-    
+
         public static class CSEditorHelper
         {
             public static object ExecuteCommand(string code)
@@ -868,13 +868,13 @@ try
                         }}
                     }}
                 ";
-    
+
                 // Use Mono's built-in compiler
                 var options = new System.CodeDom.Compiler.CompilerParameters
                 {
                     GenerateInMemory = true
                 };
-                
+
                 // Add necessary references
                 options.ReferencedAssemblies.Add(typeof(UnityEngine.Object).Assembly.Location);
                 options.ReferencedAssemblies.Add(typeof(UnityEditor.Editor).Assembly.Location);
@@ -883,7 +883,7 @@ try
                 options.ReferencedAssemblies.Add(typeof(Dictionary<,>).Assembly.Location); // Add System.Collections for Dictionary
                 options.ReferencedAssemblies.Add(AppDomain.CurrentDomain.GetAssemblies()
                     .First(a => a.GetName().Name == "netstandard").Location); // Add netstandard
-                
+
                 // Add Unity Physics assembly reference for Rigidbody and other physics components
                 var unityEnginePhysics = AppDomain.CurrentDomain.GetAssemblies()
                     .FirstOrDefault(a => a.GetName().Name == "UnityEngine.PhysicsModule");
@@ -891,7 +891,7 @@ try
                 {
                     options.ReferencedAssemblies.Add(unityEnginePhysics.Location);
                 }
-                
+
                 // Add other common Unity modules that might be needed
                 var commonModules = new[] {
                     "UnityEngine.CoreModule",
@@ -900,7 +900,7 @@ try
                     "UnityEngine.UIModule",
                     "UnityEngine.TextRenderingModule"
                 };
-                
+
                 foreach (var moduleName in commonModules)
                 {
                     var assembly = AppDomain.CurrentDomain.GetAssemblies()
@@ -910,7 +910,7 @@ try
                         options.ReferencedAssemblies.Add(assembly.Location);
                     }
                 }
-                
+
                 // Compile and execute
                 using (var provider = new Microsoft.CSharp.CSharpCodeProvider())
                 {
@@ -925,7 +925,7 @@ try
                         var errors = string.Join("\n", results.Errors.Cast<CompilerError>().Select(e => e.ErrorText));
                         throw new Exception($"Compilation failed:\n{errors}");
                     }
-    
+
                     var assembly = results.CompiledAssembly;
                     var type = assembly.GetType("CodeExecution.MainExecutor");
                     var method = type.GetMethod("Execute");
@@ -937,25 +937,25 @@ try
             {
                 var results = new List<object>();
                 var errors = new List<string>();
-                
+
                 for (int i = 0; i < commands.Length; i++)
                 {
                     try
                     {
-                        Debug.Log($"[UnityMCP] Executing command {i+1}/{commands.Length}");
+                        Debug.Log($"[UnityMCP] Executing command {i + 1}/{commands.Length}");
                         var result = ExecuteCommand(commands[i]);
                         results.Add(result);
                     }
                     catch (Exception e)
                     {
-                        var errorMessage = $"Command {i+1} failed: {e.Message}";
+                        var errorMessage = $"Command {i + 1} failed: {e.Message}";
                         Debug.LogError($"[UnityMCP] {errorMessage}");
                         errors.Add(errorMessage);
                     }
                 }
-                
+
                 Debug.Log($"[UnityMCP] Batch execution completed. {results.Count} commands succeeded, {errors.Count} failed.");
-                
+
                 if (errors.Count > 0)
                 {
                     Debug.LogWarning($"[UnityMCP] Errors during batch execution:\n{string.Join("\n", errors)}");
