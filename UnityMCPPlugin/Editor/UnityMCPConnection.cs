@@ -791,20 +791,26 @@ try
         {
             public static object ExecuteCommand(string code)
             {
-                // Create a method that wraps the code
+                // Allow defining classes and functions at the root level
                 string wrappedCode = $@"
                     using UnityEngine;
                     using UnityEditor;
                     using System;
                     using System.Linq;
                     using System.Collections.Generic;
-    
-                    public class CodeExecutor
+                    using System.IO;
+                    using System.Reflection;
+
+                    namespace CodeExecution
                     {{
-                        public static object Execute()
+                        {code}
+
+                        public class MainExecutor
                         {{
-                            {code}
-                            return ""Success"";
+                            public static object Execute()
+                            {{
+                                return ""Success"";
+                            }}
                         }}
                     }}
                 ";
@@ -861,7 +867,7 @@ try
                     }
     
                     var assembly = results.CompiledAssembly;
-                    var type = assembly.GetType("CodeExecutor");
+                    var type = assembly.GetType("CodeExecution.MainExecutor");
                     var method = type.GetMethod("Execute");
                     return method.Invoke(null, null);
                 }
