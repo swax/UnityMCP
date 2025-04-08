@@ -15,7 +15,10 @@ interface UnityEditorState {
   playModeState: string;
   sceneHierarchy: any;
   projectStructure: {
-    [key: string]: string[];
+    scenes?: string[];
+    prefabs?: string[];
+    scripts?: string[];
+    [key: string]: string[] | undefined;
   };
 }
 
@@ -24,6 +27,20 @@ interface LogEntry {
   stackTrace: string;
   logType: string;
   timestamp: string;
+}
+
+// Add explicit type for command result
+interface CommandResult {
+  result: any;
+  logs: string[];
+  errors: string[];
+  warnings: string[];
+  executionSuccess: boolean;
+  errorDetails?: {
+    message: string;
+    stackTrace: string;
+    type: string;
+  };
 }
 
 class UnityMCPServer {
@@ -43,7 +60,7 @@ class UnityMCPServer {
   
   // Add command result promise handling
   private commandResultPromise: {
-    resolve: (value: any) => void;
+    resolve: (value: CommandResult) => void;
     reject: (reason?: any) => void;
   } | null = null;
   private commandStartTime: number | null = null;
@@ -140,7 +157,7 @@ class UnityMCPServer {
       case 'commandResult':
         // Resolve the pending command result promise
         if (this.commandResultPromise) {
-          this.commandResultPromise.resolve(message.data);
+          this.commandResultPromise.resolve(message.data as CommandResult);
           this.commandResultPromise = null;
         }
         break;
@@ -195,7 +212,7 @@ class UnityMCPServer {
         },
         {
           name: 'execute_editor_command',
-          description: 'Execute arbitrary C# code within the Unity Editor context. This powerful tool allows for direct manipulation of the Unity Editor, GameObjects, components, and project assets using the Unity Editor API.',
+          description: 'Execute arbitrary C# code file within the Unity Editor context. This powerful tool allows for direct manipulation of the Unity Editor, GameObjects, components, and project assets using the Unity Editor API.',
           category: 'Editor Control',
           tags: ['unity', 'editor', 'command', 'c#', 'scripting'],
           inputSchema: {
@@ -203,11 +220,30 @@ class UnityMCPServer {
             properties: {
               code: {
                 type: 'string',
-                description: 'C# code to execute in the Unity Editor context. The code has access to all UnityEditor and UnityEngine APIs.',
+                description: 
+`C# code file to execute in the Unity Editor context. 
+The code has access to all UnityEditor and UnityEngine APIs. 
+Include any necessary using directives at the top of the code.
+The code must have a EditorCommand class with a static Execute method that returns an object.`,
                 minLength: 1,
                 examples: [
-                  'Selection.activeGameObject.transform.position = Vector3.zero;',
-                  'EditorApplication.isPlaying = !EditorApplication.isPlaying;'
+`using UnityEngine;
+using UnityEditor;
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+
+public class EditorCommand
+{
+    public static object Execute()
+    {
+        Selection.activeGameObject.transform.position = Vector3.zero;
+        EditorApplication.isPlaying = !EditorApplication.isPlaying;
+        return ""Success"";
+    }
+}`,
                 ]
               }
             },
@@ -434,11 +470,13 @@ class UnityMCPServer {
             // Send command to Unity
             this.unityConnection.send(JSON.stringify({
               type: 'executeEditorCommand',
-              data: { code: args.code },
+              data: { 
+                code: args.code,
+              },
             }));
 
             // Wait for result with enhanced timeout handling
-            const timeoutMs = 5000;
+            const timeoutMs = 30_000;
             const result = await Promise.race([
               new Promise((resolve, reject) => {
                 this.commandResultPromise = { resolve, reject };

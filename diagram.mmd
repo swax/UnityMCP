@@ -1,0 +1,40 @@
+sequenceDiagram
+    participant User
+    participant MCPClient as MCP Client
+    participant MCPServer as MCP Server<br/>(index.ts)
+    participant UnityConn as Unity Connection<br/>(UnityMCPConnection.cs)
+    participant UnityEditor as Unity Editor
+
+    User->>MCPClient: Issue command
+    MCPClient->>MCPServer: Call tool<br/>(CallToolRequestSchema)
+    
+    alt Tool: execute_editor_command
+        MCPServer->>UnityConn: Send WebSocket message<br/>(type: "executeEditorCommand")
+        Note over MCPServer: Creates commandResultPromise<br/>in UnityMCPServer class
+        
+        UnityConn->>UnityConn: HandleMessage()<br/>identifies command type
+        UnityConn->>UnityEditor: CSEditorHelper.ExecuteCommand()<br/>or ExecuteSimpleCommand()
+        Note over UnityConn: Compiles and executes C# code
+        
+        UnityEditor-->>UnityConn: Return execution result
+        UnityConn-->>MCPServer: WebSocket response<br/>(type: "commandResult")
+        
+        Note over MCPServer: handleUnityMessage()<br/>resolves commandResultPromise
+    else Tool: get_editor_state
+        MCPServer->>MCPServer: Return current editorState
+        Note over MCPServer: No direct Unity communication<br/>State updated via background polling
+    else Tool: get_logs
+        MCPServer->>MCPServer: filterLogs()
+        Note over MCPServer: Returns logs from buffer<br/>Unity sends logs continuously
+    end
+    
+    MCPServer-->>MCPClient: Return tool result
+    MCPClient-->>User: Display result
+
+    loop Background Communication
+        UnityConn->>MCPServer: Send editor state updates<br/>(type: "editorState")
+        Note over UnityConn: StartSendingEditorState()<br/>every 1 second
+        
+        UnityConn->>MCPServer: Send log messages<br/>(type: "log")
+        Note over UnityConn: HandleLogMessage()<br/>on Application.logMessageReceived
+    end
