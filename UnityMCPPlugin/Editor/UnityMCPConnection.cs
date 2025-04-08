@@ -863,6 +863,11 @@ try
                     var results = provider.CompileAssemblyFromSource(options, wrappedCode);
                     if (results.Errors.HasErrors)
                     {
+                        Debug.LogError($"Assembly references: {string.Join(", ", options.ReferencedAssemblies)}");
+                        foreach (CompilerError error in results.Errors)
+                        {
+                            Debug.LogError($"Error {error.ErrorNumber}: {error.ErrorText}, Line {error.Line}");
+                        }
                         var errors = string.Join("\n", results.Errors.Cast<CompilerError>().Select(e => e.ErrorText));
                         throw new Exception($"Compilation failed:\n{errors}");
                     }
