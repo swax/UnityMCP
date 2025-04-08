@@ -246,7 +246,14 @@ namespace UnityMCP.Editor
                         TogglePlayMode();
                         break;
                     case "executeEditorCommand":
-                        ExecuteEditorCommand(data["data"].ToString());
+                        var commandData = JsonConvert.DeserializeObject<EditorCommandData>(data["data"].ToString());
+                        // Check if the command has a "simple" flag
+                        bool isSimple = commandData.simple ?? false;
+
+                        if (isSimple)
+                            ExecuteSimpleEditorCommand(data["data"].ToString());
+                        else
+                            ExecuteEditorCommand(data["data"].ToString());
                         break;
                     case "executeCommandBatch":
                         ExecuteCommandBatch(data["data"].ToString());
@@ -261,6 +268,195 @@ namespace UnityMCP.Editor
             {
                 Debug.LogError($"Error handling message: {e.Message}");
             }
+        }
+
+        private static void ExecuteSimpleEditorCommand(string commandData)
+        {
+            var logs = new List<string>();
+            var errors = new List<string>();
+            var warnings = new List<string>();
+
+            Application.logMessageReceived += LogHandler;
+
+            try
+            {
+                var commandObj = JsonConvert.DeserializeObject<EditorCommandData>(commandData);
+                var code = commandObj.code;
+
+                Debug.Log($"[UnityMCP] Executing simple command:\n{code}");
+                // Execute the code directly in the Editor context
+                try
+                {
+                    // Execute the provided code
+                    var result = CSEditorHelper.ExecuteSimpleCommand(code);
+
+                    // Send back detailed execution results
+                    var resultMessage = JsonConvert.SerializeObject(new
+                    {
+                        type = "commandResult",
+                        data = new
+                        {
+                            result = result,
+                            logs = logs,
+                            errors = errors,
+                            warnings = warnings,
+                            executionSuccess = true
+                        }
+                    });
+                    var buffer = Encoding.UTF8.GetBytes(resultMessage);
+                    webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"Failed to execute simple command: {e.Message}", e);
+                }
+            }
+            catch (Exception e)
+            {
+                var error = $"[UnityMCP] Failed to execute simple editor command: {e.Message}\n{e.StackTrace}";
+                Debug.LogError(error);
+
+                // Send back error information
+                var errorMessage = JsonConvert.SerializeObject(new
+                {
+                    type = "commandResult",
+                    data = new
+                    {
+                        result = (object)null,
+                        logs = logs,
+                        errors = new List<string>(errors) { error },
+                        warnings = warnings,
+                        executionSuccess = false,
+                        errorDetails = new
+                        {
+                            message = e.Message,
+                            stackTrace = e.StackTrace,
+                            type = e.GetType().Name
+                        }
+                    }
+                });
+                var buffer = Encoding.UTF8.GetBytes(errorMessage);
+                webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
+            }
+            finally
+            {
+                Application.logMessageReceived -= LogHandler;
+            }
+
+            void LogHandler(string message, string stackTrace, LogType type)
+            {
+                switch (type)
+                {
+                    case LogType.Log:
+                        logs.Add(message);
+                        break;
+                    case LogType.Warning:
+                        warnings.Add(message);
+                        break;
+                    case LogType.Error:
+                    case LogType.Exception:
+                        errors.Add($"{message}\n{stackTrace}");
+                        break;
+                }
+            }
+        }
+
+        private static void ExecuteEditorCommand(string commandData)
+        {
+            var logs = new List<string>();
+            var errors = new List<string>();
+            var warnings = new List<string>();
+
+            Application.logMessageReceived += LogHandler;
+
+            try
+            {
+                var commandObj = JsonConvert.DeserializeObject<EditorCommandData>(commandData);
+                var code = commandObj.code;
+
+                Debug.Log($"[UnityMCP] Executing command:\n{code}");
+                // Execute the code directly in the Editor context
+                try
+                {
+                    // Execute the provided code
+                    var result = CSEditorHelper.ExecuteCommand(code);
+
+                    // Send back detailed execution results
+                    // Send back detailed execution results
+                    var resultMessage = JsonConvert.SerializeObject(new
+                    {
+                        type = "commandResult",
+                        data = new
+                        {
+                            result = result,
+                            logs = logs,
+                            errors = errors,
+                            warnings = warnings,
+                            executionSuccess = true
+                        }
+                    });
+                    var buffer = Encoding.UTF8.GetBytes(resultMessage);
+                    webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"Failed to execute command: {e.Message}", e);
+                }
+            }
+            catch (Exception e)
+            {
+                var error = $"[UnityMCP] Failed to execute editor command: {e.Message}\n{e.StackTrace}";
+                Debug.LogError(error);
+
+                // Send back error information
+                var errorMessage = JsonConvert.SerializeObject(new
+                {
+                    type = "commandResult",
+                    data = new
+                    {
+                        result = (object)null,
+                        logs = logs,
+                        errors = new List<string>(errors) { error },
+                        warnings = warnings,
+                        executionSuccess = false,
+                        errorDetails = new
+                        {
+                            message = e.Message,
+                            stackTrace = e.StackTrace,
+                            type = e.GetType().Name
+                        }
+                    }
+                });
+                var buffer = Encoding.UTF8.GetBytes(errorMessage);
+                webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
+            }
+            finally
+            {
+                Application.logMessageReceived -= LogHandler;
+            }
+
+            void LogHandler(string message, string stackTrace, LogType type)
+            {
+                switch (type)
+                {
+                    case LogType.Log:
+                        logs.Add(message);
+                        break;
+                    case LogType.Warning:
+                        warnings.Add(message);
+                        break;
+                    case LogType.Error:
+                    case LogType.Exception:
+                        errors.Add($"{message}\n{stackTrace}");
+                        break;
+                }
+            }
+        }
+
+        private class EditorCommandData
+        {
+            public string code { get; set; }
+            public bool? simple { get; set; }
         }
 
         private static void ExecuteCommandBatch(string batchData)
@@ -471,103 +667,6 @@ namespace UnityMCP.Editor
                 var buffer = Encoding.UTF8.GetBytes(errorMessage);
                 webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
             }
-        }
-
-        private static void ExecuteEditorCommand(string commandData)
-        {
-            var logs = new List<string>();
-            var errors = new List<string>();
-            var warnings = new List<string>();
-
-            Application.logMessageReceived += LogHandler;
-
-            try
-            {
-                var commandObj = JsonConvert.DeserializeObject<EditorCommandData>(commandData);
-                var code = commandObj.code;
-
-                Debug.Log($"[UnityMCP] Executing command:\n{code}");
-                // Execute the code directly in the Editor context
-                try
-                {
-                    // Execute the provided code
-                    var result = CSEditorHelper.ExecuteCommand(code);
-
-                    // Send back detailed execution results
-                    // Send back detailed execution results
-                    var resultMessage = JsonConvert.SerializeObject(new
-                    {
-                        type = "commandResult",
-                        data = new
-                        {
-                            result = result,
-                            logs = logs,
-                            errors = errors,
-                            warnings = warnings,
-                            executionSuccess = true
-                        }
-                    });
-                    var buffer = Encoding.UTF8.GetBytes(resultMessage);
-                    webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"Failed to execute command: {e.Message}", e);
-                }
-            }
-            catch (Exception e)
-            {
-                var error = $"[UnityMCP] Failed to execute editor command: {e.Message}\n{e.StackTrace}";
-                Debug.LogError(error);
-
-                // Send back error information
-                var errorMessage = JsonConvert.SerializeObject(new
-                {
-                    type = "commandResult",
-                    data = new
-                    {
-                        result = (object)null,
-                        logs = logs,
-                        errors = new List<string>(errors) { error },
-                        warnings = warnings,
-                        executionSuccess = false,
-                        errorDetails = new
-                        {
-                            message = e.Message,
-                            stackTrace = e.StackTrace,
-                            type = e.GetType().Name
-                        }
-                    }
-                });
-                var buffer = Encoding.UTF8.GetBytes(errorMessage);
-                webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
-            }
-            finally
-            {
-                Application.logMessageReceived -= LogHandler;
-            }
-
-            void LogHandler(string message, string stackTrace, LogType type)
-            {
-                switch (type)
-                {
-                    case LogType.Log:
-                        logs.Add(message);
-                        break;
-                    case LogType.Warning:
-                        warnings.Add(message);
-                        break;
-                    case LogType.Error:
-                    case LogType.Exception:
-                        errors.Add($"{message}\n{stackTrace}");
-                        break;
-                }
-            }
-        }
-
-        private class EditorCommandData
-        {
-            public string code { get; set; }
         }
 
         private static void SelectGameObject(string objectPath)
@@ -869,6 +968,36 @@ namespace UnityMCP.Editor
                     }}
                 ";
 
+                return CompileAndExecute(wrappedCode, "CodeExecution.MainExecutor");
+            }
+
+            public static object ExecuteSimpleCommand(string code)
+            {
+                // Create a method that directly executes the provided code
+                string wrappedCode = $@"
+                    using UnityEngine;
+                    using UnityEditor;
+                    using System;
+                    using System.Linq;
+                    using System.Collections.Generic;
+                    using System.IO;
+                    using System.Reflection;
+
+                    public class CodeExecutor
+                    {{
+                        public static object Execute()
+                        {{
+                            {code}
+                            return ""Success"";
+                        }}
+                    }}
+                ";
+
+                return CompileAndExecute(wrappedCode, "CodeExecutor");
+            }
+
+            private static object CompileAndExecute(string wrappedCode, string executorTypeName)
+            {
                 // Use Mono's built-in compiler
                 var options = new System.CodeDom.Compiler.CompilerParameters
                 {
@@ -927,7 +1056,7 @@ namespace UnityMCP.Editor
                     }
 
                     var assembly = results.CompiledAssembly;
-                    var type = assembly.GetType("CodeExecution.MainExecutor");
+                    var type = assembly.GetType(executorTypeName);
                     var method = type.GetMethod("Execute");
                     return method.Invoke(null, null);
                 }
