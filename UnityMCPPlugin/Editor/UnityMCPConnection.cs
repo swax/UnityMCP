@@ -248,6 +248,9 @@ namespace UnityMCP.Editor
                     case "executeEditorCommand":
                         ExecuteEditorCommand(data["data"].ToString());
                         break;
+                    case "executeCommandBatch":
+                        ExecuteCommandBatch(data["data"].ToString());
+                        break;
                     case "createUdonSharpScript":
                         var scriptData = JsonConvert.DeserializeObject<UdonSharpScriptData>(data["data"].ToString());
                         CreateUdonSharpScript(scriptData.name, scriptData.code, scriptData.targetGameObject);
@@ -258,6 +261,57 @@ namespace UnityMCP.Editor
             {
                 Debug.LogError($"Error handling message: {e.Message}");
             }
+        }
+
+        private static void ExecuteCommandBatch(string batchData)
+        {
+            try
+            {
+                var batchObj = JsonConvert.DeserializeObject<CommandBatchData>(batchData);
+                if (batchObj.commands == null || batchObj.commands.Length == 0)
+                {
+                    Debug.LogWarning("[UnityMCP] Received empty command batch");
+                    return;
+                }
+
+                Debug.Log($"[UnityMCP] Executing batch of {batchObj.commands.Length} commands");
+                CSEditorHelper.ExecuteCommandBatch(batchObj.commands);
+                
+                // Send success response
+                var successMessage = JsonConvert.SerializeObject(new
+                {
+                    type = "commandBatchResult",
+                    data = new
+                    {
+                        success = true,
+                        commandCount = batchObj.commands.Length
+                    }
+                });
+                var buffer = Encoding.UTF8.GetBytes(successMessage);
+                webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[UnityMCP] Failed to execute command batch: {e.Message}");
+                
+                // Send error response
+                var errorMessage = JsonConvert.SerializeObject(new
+                {
+                    type = "commandBatchResult",
+                    data = new
+                    {
+                        success = false,
+                        error = e.Message
+                    }
+                });
+                var buffer = Encoding.UTF8.GetBytes(errorMessage);
+                webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
+            }
+        }
+
+        private class CommandBatchData
+        {
+            public string[] commands { get; set; }
         }
 
         private class UdonSharpScriptData
@@ -876,6 +930,35 @@ try
                     var type = assembly.GetType("CodeExecution.MainExecutor");
                     var method = type.GetMethod("Execute");
                     return method.Invoke(null, null);
+                }
+            }
+
+            public static void ExecuteCommandBatch(string[] commands)
+            {
+                var results = new List<object>();
+                var errors = new List<string>();
+                
+                for (int i = 0; i < commands.Length; i++)
+                {
+                    try
+                    {
+                        Debug.Log($"[UnityMCP] Executing command {i+1}/{commands.Length}");
+                        var result = ExecuteCommand(commands[i]);
+                        results.Add(result);
+                    }
+                    catch (Exception e)
+                    {
+                        var errorMessage = $"Command {i+1} failed: {e.Message}";
+                        Debug.LogError($"[UnityMCP] {errorMessage}");
+                        errors.Add(errorMessage);
+                    }
+                }
+                
+                Debug.Log($"[UnityMCP] Batch execution completed. {results.Count} commands succeeded, {errors.Count} failed.");
+                
+                if (errors.Count > 0)
+                {
+                    Debug.LogWarning($"[UnityMCP] Errors during batch execution:\n{string.Join("\n", errors)}");
                 }
             }
         }
