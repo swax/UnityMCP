@@ -660,6 +660,33 @@ try
                 options.ReferencedAssemblies.Add(AppDomain.CurrentDomain.GetAssemblies()
                     .First(a => a.GetName().Name == "netstandard").Location); // Add netstandard
                 
+                // Add Unity Physics assembly reference for Rigidbody and other physics components
+                var unityEnginePhysics = AppDomain.CurrentDomain.GetAssemblies()
+                    .FirstOrDefault(a => a.GetName().Name == "UnityEngine.PhysicsModule");
+                if (unityEnginePhysics != null)
+                {
+                    options.ReferencedAssemblies.Add(unityEnginePhysics.Location);
+                }
+                
+                // Add other common Unity modules that might be needed
+                var commonModules = new[] {
+                    "UnityEngine.CoreModule",
+                    "UnityEngine.IMGUIModule",
+                    "UnityEngine.AnimationModule",
+                    "UnityEngine.UIModule",
+                    "UnityEngine.TextRenderingModule"
+                };
+                
+                foreach (var moduleName in commonModules)
+                {
+                    var assembly = AppDomain.CurrentDomain.GetAssemblies()
+                        .FirstOrDefault(a => a.GetName().Name == moduleName);
+                    if (assembly != null)
+                    {
+                        options.ReferencedAssemblies.Add(assembly.Location);
+                    }
+                }
+                
                 // Compile and execute
                 using (var provider = new Microsoft.CSharp.CSharpCodeProvider())
                 {
