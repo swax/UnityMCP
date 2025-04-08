@@ -89,7 +89,20 @@ public class ScriptTester : EditorWindow
     {
         logs.Clear();
         hasError = false;
-        resultText = "";
+        resultText = "Executing script...";
+        
+        // Force immediate UI update before execution
+        Repaint();
+        
+        // Use delayCall instead of update to ensure UI has time to refresh
+        // delayCall happens after all inspector redraws are complete
+        EditorApplication.delayCall += ExecuteAfterRepaint;
+    }
+    
+    private void ExecuteAfterRepaint()
+    {
+        // Remove the callback
+        EditorApplication.delayCall -= ExecuteAfterRepaint;
         
         // Collect logs during execution
         Application.logMessageReceived += LogHandler;
