@@ -826,6 +826,7 @@ try
                 options.ReferencedAssemblies.Add(typeof(UnityEditor.Editor).Assembly.Location);
                 options.ReferencedAssemblies.Add(typeof(System.Linq.Enumerable).Assembly.Location); // Add System.Core for LINQ
                 options.ReferencedAssemblies.Add(typeof(object).Assembly.Location); // Add mscorlib
+                options.ReferencedAssemblies.Add(typeof(Dictionary<,>).Assembly.Location); // Add System.Collections for Dictionary
                 options.ReferencedAssemblies.Add(AppDomain.CurrentDomain.GetAssemblies()
                     .First(a => a.GetName().Name == "netstandard").Location); // Add netstandard
                 
