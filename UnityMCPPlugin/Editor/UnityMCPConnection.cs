@@ -248,11 +248,174 @@ namespace UnityMCP.Editor
                     case "executeEditorCommand":
                         ExecuteEditorCommand(data["data"].ToString());
                         break;
+                    case "createUdonSharpScript":
+                        var scriptData = JsonConvert.DeserializeObject<UdonSharpScriptData>(data["data"].ToString());
+                        CreateUdonSharpScript(scriptData.name, scriptData.code, scriptData.targetGameObject);
+                        break;
                 }
             }
             catch (Exception e)
             {
                 Debug.LogError($"Error handling message: {e.Message}");
+            }
+        }
+
+        private class UdonSharpScriptData
+        {
+            public string name { get; set; }
+            public string code { get; set; }
+            public string targetGameObject { get; set; }
+        }
+
+        private static void CreateUdonSharpScript(string scriptName, string scriptCode, string targetGameObjectPath = null)
+        {
+            try
+            {
+                // 1. Create the directory if it doesn't exist
+                string scriptDirectory = "Assets/UdonSharp/Scripts";
+                if (!System.IO.Directory.Exists(scriptDirectory))
+                {
+                    System.IO.Directory.CreateDirectory(scriptDirectory);
+                }
+
+                // 2. Create the script file
+                string scriptPath = $"{scriptDirectory}/{scriptName}.cs";
+                System.IO.File.WriteAllText(scriptPath, scriptCode);
+                AssetDatabase.Refresh();
+
+                Debug.Log($"[UnityMCP] Created UdonSharp script at {scriptPath}");
+
+                // 3. If a target GameObject is specified, try to attach the script after compilation
+                if (!string.IsNullOrEmpty(targetGameObjectPath))
+                {
+                    // Need to wait for UdonSharp compilation to complete
+                    EditorApplication.delayCall += () =>
+                    {
+                        // This code will run after UdonSharp has had a chance to compile the script
+                        var attachCommand = $@"
+                            try {{
+                                // Find the target GameObject
+                                GameObject targetObj = GameObject.Find(""{targetGameObjectPath}"");
+                                if (targetObj == null)
+                                {{
+                                    Debug.LogError(""[UnityMCP] Target GameObject not found: {targetGameObjectPath}"");
+                                    return ""GameObject not found"";
+                                }}
+
+                                // Use reflection to avoid direct dependencies on UdonSharp/VRChat types
+                                var udonSharpBehaviourType = AppDomain.CurrentDomain.GetAssemblies()
+                                    .SelectMany(a => a.GetTypes())
+                                    .FirstOrDefault(t => t.FullName == ""UdonSharp.UdonSharpBehaviour"");
+                                
+                                if (udonSharpBehaviourType == null)
+                                {{
+                                    Debug.LogError(""[UnityMCP] UdonSharpBehaviour type not found. Is UdonSharp installed?"");
+                                    return ""UdonSharp not installed"";
+                                }}
+
+                                var udonSharpEditorType = AppDomain.CurrentDomain.GetAssemblies()
+                                    .SelectMany(a => a.GetTypes())
+                                    .FirstOrDefault(t => t.FullName == ""UdonSharp.UdonSharpProgramAsset"" || 
+                                                        t.FullName == ""UdonSharp.UdonSharpEditorUtility"" ||
+                                                        t.FullName.Contains("".UdonSharpUtils""));
+
+                                if (udonSharpEditorType == null)
+                                {{
+                                    Debug.LogError(""[UnityMCP] UdonSharp editor utilities not found"");
+                                    return ""UdonSharp editor utilities not found"";
+                                }}
+
+                                // Try to find the compiled program asset through AssetDatabase
+                                var guids = AssetDatabase.FindAssets(""{scriptName} t:UdonSharpProgramAsset"");
+                                if (guids == null || guids.Length == 0)
+                                {{
+                                    Debug.LogError(""[UnityMCP] Could not find compiled UdonSharp program asset for {scriptName}"");
+                                    return ""Program asset not found"";
+                                }}
+
+                                string assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
+                                var programAsset = AssetDatabase.LoadAssetAtPath(assetPath, typeof(UnityEngine.Object));
+
+                                // Add UdonBehaviour component and assign the program
+                                var udonBehaviourType = AppDomain.CurrentDomain.GetAssemblies()
+                                    .SelectMany(a => a.GetTypes())
+                                    .FirstOrDefault(t => t.FullName == ""VRC.Udon.UdonBehaviour"");
+
+                                if (udonBehaviourType == null)
+                                {{
+                                    Debug.LogError(""[UnityMCP] UdonBehaviour type not found. Is VRChat SDK installed?"");
+                                    return ""VRChat SDK not installed"";
+                                }}
+
+                                // Add UdonBehaviour component
+                                var udonBehaviour = targetObj.AddComponent(udonBehaviourType);
+                                
+                                // Set the program source field using reflection
+                                var programSourceField = udonBehaviourType.GetField(""programSource"") ?? 
+                                                       udonBehaviourType.GetProperty(""programSource"")?.GetSetMethod();
+                                
+                                if (programSourceField != null)
+                                {{
+                                    if (programSourceField is FieldInfo field)
+                                    {{
+                                        field.SetValue(udonBehaviour, programAsset);
+                                    }}
+                                    else if (programSourceField is MethodInfo method)
+                                    {{
+                                        method.Invoke(udonBehaviour, new object[] {{ programAsset }});
+                                    }}
+                                    Debug.Log($""[UnityMCP] Successfully attached UdonSharp script {scriptName} to {targetGameObjectPath}"");
+                                    return ""Success"";
+                                }}
+                                else
+                                {{
+                                    Debug.LogError(""[UnityMCP] Could not find programSource field on UdonBehaviour"");
+                                    return ""Failed to set program source"";
+                                }}
+                            }}
+                            catch (Exception e)
+                            {{
+                                Debug.LogError($""[UnityMCP] Error attaching UdonSharp script: {{e.Message}}\\n{{e.StackTrace}}"");
+                                return $""Error: {{e.Message}}"";
+                            }}
+                        ";
+
+                        // Execute the attachment code after a delay
+                        CSEditorHelper.ExecuteCommand(attachCommand);
+                    };
+                }
+
+                // Send success response
+                var successMessage = JsonConvert.SerializeObject(new
+                {
+                    type = "udonSharpScriptCreated",
+                    data = new
+                    {
+                        name = scriptName,
+                        path = scriptPath,
+                        success = true
+                    }
+                });
+                var buffer = Encoding.UTF8.GetBytes(successMessage);
+                webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[UnityMCP] Failed to create UdonSharp script: {e.Message}\n{e.StackTrace}");
+                
+                // Send error response
+                var errorMessage = JsonConvert.SerializeObject(new
+                {
+                    type = "udonSharpScriptCreated",
+                    data = new
+                    {
+                        name = scriptName,
+                        success = false,
+                        error = e.Message
+                    }
+                });
+                var buffer = Encoding.UTF8.GetBytes(errorMessage);
+                webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cts.Token).Wait();
             }
         }
 
