@@ -1,20 +1,17 @@
 #!/usr/bin/env node
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
   ErrorCode,
   ListToolsRequestSchema,
   McpError,
-} from '@modelcontextprotocol/sdk/types.js';
-import { 
-  getAllTools, 
-  UnityEditorState,
-  LogEntry, 
-  CommandResult, 
-  ToolContext 
-} from './tools/index.js';
-import { UnityConnection, CommandResultHandler } from './communication/UnityConnection.js';
+} from "@modelcontextprotocol/sdk/types.js";
+import {
+  CommandResultHandler,
+  UnityConnection,
+} from "./communication/UnityConnection.js";
+import { getAllTools, ToolContext } from "./tools/index.js";
 
 class UnityMCPServer {
   private server: Server;
@@ -24,14 +21,14 @@ class UnityMCPServer {
     // Initialize MCP Server
     this.server = new Server(
       {
-        name: 'unity-mcp-server',
-        version: '0.1.0',
+        name: "unity-mcp-server",
+        version: "0.1.0",
       },
       {
         capabilities: {
           tools: {},
         },
-      }
+      },
     );
 
     // Initialize WebSocket Server for Unity communication
@@ -39,8 +36,8 @@ class UnityMCPServer {
     this.setupTools();
 
     // Error handling
-    this.server.onerror = (error) => console.error('[MCP Error]', error);
-    process.on('SIGINT', async () => {
+    this.server.onerror = (error) => console.error("[MCP Error]", error);
+    process.on("SIGINT", async () => {
       await this.cleanup();
       process.exit(0);
     });
@@ -48,10 +45,10 @@ class UnityMCPServer {
 
   private setupTools() {
     const tools = getAllTools();
-    
+
     // List available tools with comprehensive documentation
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: tools.map(tool => tool.getDefinition()),
+      tools: tools.map((tool) => tool.getDefinition()),
     }));
 
     // Handle tool calls with enhanced validation and error handling
@@ -60,21 +57,23 @@ class UnityMCPServer {
       if (!this.unityConnection.isConnected()) {
         throw new McpError(
           ErrorCode.InternalError,
-          'Unity Editor is not connected. Please ensure the Unity Editor is running and the UnityMCP window is open.'
+          "Unity Editor is not connected. Please ensure the Unity Editor is running and the UnityMCP window is open.",
         );
       }
 
       const { name, arguments: args } = request.params;
 
       // Find the requested tool
-      const tool = tools.find(t => t.getDefinition().name === name);
+      const tool = tools.find((t) => t.getDefinition().name === name);
 
       // Validate tool exists with helpful error message
       if (!tool) {
-        const availableTools = tools.map(t => t.getDefinition().name);
+        const availableTools = tools.map((t) => t.getDefinition().name);
         throw new McpError(
           ErrorCode.MethodNotFound,
-          `Unknown tool: ${name}. Available tools are: ${availableTools.join(', ')}`
+          `Unknown tool: ${name}. Available tools are: ${availableTools.join(
+            ", ",
+          )}`,
         );
       }
 
@@ -90,7 +89,7 @@ class UnityMCPServer {
         },
         setCommandStartTime: (time: number) => {
           this.unityConnection.setCommandStartTime(time);
-        }
+        },
       };
 
       // Execute the tool
@@ -106,8 +105,8 @@ class UnityMCPServer {
   async run() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('Unity MCP server running on stdio');
-    
+    console.error("Unity MCP server running on stdio");
+
     // Wait for WebSocket server to be ready
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 100); // Small delay to ensure WebSocket server is initialized

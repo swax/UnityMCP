@@ -1,6 +1,7 @@
-import { WebSocket } from 'ws';
-import { McpError } from '@modelcontextprotocol/sdk/types.js';
-import { UnityConnection, CommandResultHandler } from '../communication/UnityConnection.js';
+import {
+  CommandResultHandler,
+  UnityConnection,
+} from "../communication/UnityConnection.js";
 
 export interface UnityEditorState {
   activeGameObjects: string[];

@@ -1,5 +1,5 @@
-import { WebSocketServer, WebSocket } from 'ws';
-import { UnityEditorState, LogEntry, CommandResult } from '../tools/index.js';
+import { WebSocket, WebSocketServer } from "ws";
+import { CommandResult, LogEntry, UnityEditorState } from "../tools/index.js";
 
 export interface CommandResultHandler {
   resolve: (value: CommandResult) => void;
@@ -12,19 +12,20 @@ export class UnityConnection {
   private editorState: UnityEditorState = {
     activeGameObjects: [],
     selectedObjects: [],
-    playModeState: 'Stopped',
+    playModeState: "Stopped",
     sceneHierarchy: {},
-    projectStructure: {}
+    projectStructure: {},
   };
 
   private logBuffer: LogEntry[] = [];
   private readonly maxLogBufferSize = 1000;
-  
+
   private commandResultPromise: CommandResultHandler | null = null;
   private commandStartTime: number | null = null;
 
   // Event callbacks
-  private onEditorStateUpdated: ((state: UnityEditorState) => void) | null = null;
+  private onEditorStateUpdated: ((state: UnityEditorState) => void) | null =
+    null;
   private onCommandResult: ((result: CommandResult) => void) | null = null;
   private onLogReceived: ((entry: LogEntry) => void) | null = null;
 
@@ -34,36 +35,38 @@ export class UnityConnection {
   }
 
   private setupWebSocket() {
-    console.error('[Unity MCP] WebSocket server starting on port 8080');
-    
-    this.wsServer.on('listening', () => {
-      console.error('[Unity MCP] WebSocket server is listening for connections');
+    console.error("[Unity MCP] WebSocket server starting on port 8080");
+
+    this.wsServer.on("listening", () => {
+      console.error(
+        "[Unity MCP] WebSocket server is listening for connections",
+      );
     });
 
-    this.wsServer.on('error', (error) => {
-      console.error('[Unity MCP] WebSocket server error:', error);
+    this.wsServer.on("error", (error) => {
+      console.error("[Unity MCP] WebSocket server error:", error);
     });
 
-    this.wsServer.on('connection', (ws: WebSocket) => {
-      console.error('[Unity MCP] Unity Editor connected');
+    this.wsServer.on("connection", (ws: WebSocket) => {
+      console.error("[Unity MCP] Unity Editor connected");
       this.connection = ws;
 
-      ws.on('message', (data: Buffer) => {
+      ws.on("message", (data: Buffer) => {
         try {
           const message = JSON.parse(data.toString());
-          console.error('[Unity MCP] Received message:', message.type);
+          console.error("[Unity MCP] Received message:", message.type);
           this.handleUnityMessage(message);
         } catch (error) {
-          console.error('[Unity MCP] Error handling message:', error);
+          console.error("[Unity MCP] Error handling message:", error);
         }
       });
 
-      ws.on('error', (error) => {
-        console.error('[Unity MCP] WebSocket error:', error);
+      ws.on("error", (error) => {
+        console.error("[Unity MCP] WebSocket error:", error);
       });
 
-      ws.on('close', () => {
-        console.error('[Unity MCP] Unity Editor disconnected');
+      ws.on("close", () => {
+        console.error("[Unity MCP] Unity Editor disconnected");
         this.connection = null;
       });
     });
@@ -71,23 +74,23 @@ export class UnityConnection {
 
   private handleUnityMessage(message: any) {
     switch (message.type) {
-      case 'editorState':
+      case "editorState":
         // Create a simplified version of the state
         const filteredData: UnityEditorState = {
           activeGameObjects: message.data.activeGameObjects || [],
           selectedObjects: message.data.selectedObjects || [],
-          playModeState: message.data.playModeState || 'Stopped',
+          playModeState: message.data.playModeState || "Stopped",
           sceneHierarchy: message.data.sceneHierarchy || {},
-          projectStructure: {}
+          projectStructure: {},
         };
 
         // Filter project structure to only include user files
         if (message.data.projectStructure) {
-          Object.keys(message.data.projectStructure).forEach(key => {
+          Object.keys(message.data.projectStructure).forEach((key) => {
             if (Array.isArray(message.data.projectStructure[key])) {
-              filteredData.projectStructure[key] = (message.data.projectStructure[key] as string[]).filter(
-                (path: string) => !path.startsWith('Packages/')
-              );
+              filteredData.projectStructure[key] = (
+                message.data.projectStructure[key] as string[]
+              ).filter((path: string) => !path.startsWith("Packages/"));
             }
           });
         }
@@ -97,8 +100,8 @@ export class UnityConnection {
           this.onEditorStateUpdated(filteredData);
         }
         break;
-      
-      case 'commandResult':
+
+      case "commandResult":
         // Resolve the pending command result promise
         if (this.commandResultPromise) {
           this.commandResultPromise.resolve(message.data as CommandResult);
@@ -109,15 +112,15 @@ export class UnityConnection {
         }
         break;
 
-      case 'log':
+      case "log":
         this.handleLogMessage(message.data);
         if (this.onLogReceived) {
           this.onLogReceived(message.data);
         }
         break;
-      
+
       default:
-        console.error('[Unity MCP] Unknown message type:', message.type);
+        console.error("[Unity MCP] Unknown message type:", message.type);
     }
   }
 
@@ -154,7 +157,9 @@ export class UnityConnection {
     return this.commandStartTime;
   }
 
-  public setOnEditorStateUpdated(callback: (state: UnityEditorState) => void): void {
+  public setOnEditorStateUpdated(
+    callback: (state: UnityEditorState) => void,
+  ): void {
     this.onEditorStateUpdated = callback;
   }
 
@@ -170,23 +175,25 @@ export class UnityConnection {
     if (this.connection) {
       this.connection.send(JSON.stringify({ type, data }));
     } else {
-      console.error('[Unity MCP] Cannot send message: Unity Editor not connected');
+      console.error(
+        "[Unity MCP] Cannot send message: Unity Editor not connected",
+      );
     }
   }
 
   public async waitForConnection(timeoutMs: number = 30000): Promise<boolean> {
     if (this.connection) return true;
-    
+
     return new Promise<boolean>((resolve) => {
       const timeout = setTimeout(() => resolve(false), timeoutMs);
-      
+
       const connectionHandler = () => {
         clearTimeout(timeout);
-        this.wsServer.off('connection', connectionHandler);
+        this.wsServer.off("connection", connectionHandler);
         resolve(true);
       };
-      
-      this.wsServer.on('connection', connectionHandler);
+
+      this.wsServer.on("connection", connectionHandler);
     });
   }
 
