@@ -217,15 +217,34 @@ namespace UnityMCP.Editor
         private static async void StartReceiving()
         {
             var buffer = new byte[1024 * 4];
+            var messageBuffer = new List<byte>();
             try
             {
                 while (webSocket.State == WebSocketState.Open)
                 {
                     var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cts.Token);
+                    
                     if (result.MessageType == WebSocketMessageType.Text)
                     {
-                        var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                        HandleMessage(message);
+                        // Add received data to our message buffer
+                        messageBuffer.AddRange(new ArraySegment<byte>(buffer, 0, result.Count));
+                        
+                        // If this is the end of the message, process it
+                        if (result.EndOfMessage)
+                        {
+                            var message = Encoding.UTF8.GetString(messageBuffer.ToArray());
+                            HandleMessage(message);
+                            messageBuffer.Clear();
+                        }
+                        // Otherwise, continue receiving the rest of the message
+                    }
+                    else if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        // Handle close message
+                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, cts.Token);
+                        isConnected = false;
+                        Debug.Log("[UnityMCP] WebSocket connection closed normally");
+                        break;
                     }
                 }
             }
