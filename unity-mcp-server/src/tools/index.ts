@@ -1,7 +1,8 @@
 import { GetEditorStateTool } from './GetEditorStateTool.js';
 import { ExecuteEditorCommandTool } from './ExecuteEditorCommandTool.js';
 import { GetLogsTool } from './GetLogsTool.js';
-import { Tool } from './types.js';
+import { LogEntry, Tool, UnityEditorState, ToolContext } from './types.js';
+import { UnityConnection, CommandResultHandler } from '../communication/UnityConnection.js';
 
 export * from './types.js';
 

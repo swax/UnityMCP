@@ -106,12 +106,12 @@ public class EditorCommand
       context.setCommandStartTime(Date.now());
 
       // Send command to Unity
-      context.unityConnection!.send(JSON.stringify({
-        type: 'executeEditorCommand',
-        data: { 
+      context.unityConnection!.sendMessage(
+        'executeEditorCommand',
+        { 
           code: args.code,
-        },
-      }));
+        }
+      );
 
       // Wait for result with enhanced timeout handling
       const timeoutMs = 60_000;

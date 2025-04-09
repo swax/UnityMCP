@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
 import { McpError } from '@modelcontextprotocol/sdk/types.js';
+import { UnityConnection, CommandResultHandler } from '../communication/UnityConnection.js';
 
 export interface UnityEditorState {
   activeGameObjects: string[];
@@ -56,19 +57,13 @@ export interface ToolDefinition {
 }
 
 export interface ToolContext {
-  unityConnection: WebSocket | null;
+  unityConnection: UnityConnection;
   editorState: UnityEditorState;
   logBuffer: LogEntry[];
-  commandResultPromise: {
-    resolve: (value: CommandResult) => void;
-    reject: (reason?: any) => void;
-  } | null;
+  commandResultPromise: CommandResultHandler | null;
   commandStartTime: number | null;
-  setCommandResultPromise: (promise: {
-    resolve: (value: CommandResult) => void;
-    reject: (reason?: any) => void;
-  } | null) => void;
-  setCommandStartTime: (time: number | null) => void;
+  setCommandResultPromise: (promise: CommandResultHandler) => void;
+  setCommandStartTime: (time: number) => void;
 }
 
 export interface Tool {
