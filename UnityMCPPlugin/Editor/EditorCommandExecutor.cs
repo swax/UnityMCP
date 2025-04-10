@@ -161,16 +161,14 @@ namespace UnityMCP.Editor
             {
                 options.CoreAssemblyFileName = typeof(object).Assembly.Location;
 
-                // Add core references
+                // Add engine/editor core references
                 AddAssemblyReference(typeof(UnityEngine.Object).Assembly.Location);
                 AddAssemblyReference(typeof(UnityEditor.Editor).Assembly.Location);
+
+
                 AddAssemblyReference(typeof(System.Linq.Enumerable).Assembly.Location); // Add System.Core for LINQ
                 AddAssemblyReference(typeof(object).Assembly.Location); // Add mscorlib
-                AddAssemblyReference(typeof(Dictionary<,>).Assembly.Location); // Add System.Collections for Dictionary
-
-                // Add System.dll for additional System.IO functionality
-                AddAssemblyReference(typeof(System.IO.FileStream).Assembly.Location);
-
+              
                 // Add netstandard assembly
                 var netstandardAssembly = AppDomain.CurrentDomain.GetAssemblies()
                     .FirstOrDefault(a => a.GetName().Name == "netstandard");
@@ -192,6 +190,25 @@ namespace UnityMCP.Editor
                 foreach (var moduleName in commonModules)
                 {
                     AddAssemblyByName(moduleName);
+                }
+
+                // Add VRChat Udon and UdonSharp assemblies
+                var vrchatAssemblies = new[] {
+                    "VRC.Udon",
+                    "VRC.Udon.Common",
+                    "VRC.Udon.Editor",
+                    "VRC.Udon.Serialization.OdinSerializer",
+                    "VRC.Udon.VM",
+                    "VRC.Udon.Wrapper",
+                    "UdonSharp.Editor",
+                    "UdonSharp.Runtime",
+                    "VRCSDK3",
+                    "VRCSDKBase", // Additional VRC SDK parts that might be needed
+                };
+
+                foreach (var assemblyName in vrchatAssemblies)
+                {
+                    AddAssemblyByName(assemblyName);
                 }
             }
             catch (Exception e)
