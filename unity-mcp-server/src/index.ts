@@ -4,13 +4,16 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ErrorCode,
+  ListResourcesRequestSchema,
   ListToolsRequestSchema,
   McpError,
+  ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
   CommandResultHandler,
   UnityConnection,
 } from "./communication/UnityConnection.js";
+import { getAllResources, ResourceContext } from "./resources/index.js";
 import { getAllTools, ToolContext } from "./tools/index.js";
 
 class UnityMCPServer {
@@ -27,6 +30,7 @@ class UnityMCPServer {
       {
         capabilities: {
           tools: {},
+          resources: {},
         },
       },
     );
@@ -34,6 +38,7 @@ class UnityMCPServer {
     // Initialize WebSocket Server for Unity communication
     this.unityConnection = new UnityConnection(8080);
     this.setupTools();
+    this.setupResources();
 
     // Error handling
     this.server.onerror = (error) => console.error("[MCP Error]", error);
@@ -41,6 +46,56 @@ class UnityMCPServer {
       await this.cleanup();
       process.exit(0);
     });
+  }
+
+  /** Optional resources the user can include in Claude Desktop to give additional context to the LLM */
+  private setupResources() {
+    const resources = getAllResources();
+
+    // Set up the resource request handler
+    this.server.setRequestHandler(
+      ListResourcesRequestSchema,
+      async (request) => {
+        return {
+          resources: resources.map((resource) => resource.getDefinition()),
+        };
+      },
+    );
+
+    // Read resource contents
+    this.server.setRequestHandler(
+      ReadResourceRequestSchema,
+      async (request) => {
+        const uri = request.params.uri;
+        const resource = resources.find((r) => r.getDefinition().uri === uri);
+
+        if (!resource) {
+          throw new McpError(
+            ErrorCode.MethodNotFound,
+            `Resource not found: ${uri}. Available resources: ${resources
+              .map((r) => r.getDefinition().uri)
+              .join(", ")}`,
+          );
+        }
+
+        const resourceContext: ResourceContext = {
+          unityConnection: this.unityConnection,
+          // Add any other context properties needed
+        };
+
+        const content = await resource.getContents(resourceContext);
+
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: resource.getDefinition().mimeType,
+              text: content,
+            },
+          ],
+        };
+      },
+    );
   }
 
   private setupTools() {
