@@ -6,12 +6,46 @@ namespace UnityMCP.Editor
 {
     public class UnityMCPWindow : EditorWindow
     {
-        private Vector2 scrollPosition;
+        // State tracking for efficient repainting
+        private bool previousConnectionState;
+        private string previousErrorMessage;
 
         [MenuItem("UnityMCP/Debug Window", false, 1)]
         public static void ShowWindow()
         {
             GetWindow<UnityMCPWindow>("UnityMCP Debug");
+        }
+
+        void OnEnable()
+        {
+            // Initialize state tracking
+            previousConnectionState = UnityMCPConnection.IsConnected;
+            previousErrorMessage = UnityMCPConnection.LastErrorMessage;
+            
+            // Register for updates
+            EditorApplication.update += CheckForChanges;
+        }
+
+        void OnDisable()
+        {
+            // Clean up
+            EditorApplication.update -= CheckForChanges;
+        }
+
+        void CheckForChanges()
+        {
+            // Only repaint if something we're displaying has changed
+            bool connectionChanged = previousConnectionState != UnityMCPConnection.IsConnected;
+            bool errorChanged = previousErrorMessage != UnityMCPConnection.LastErrorMessage;
+            
+            if (connectionChanged || errorChanged)
+            {
+                // Update cached values
+                previousConnectionState = UnityMCPConnection.IsConnected;
+                previousErrorMessage = UnityMCPConnection.LastErrorMessage;
+                
+                Repaint();
+            }
         }
 
         void OnGUI()
@@ -53,18 +87,15 @@ namespace UnityMCP.Editor
                 if (!string.IsNullOrEmpty(UnityMCPConnection.LastErrorMessage))
                 {
                     EditorGUILayout.LabelField("Last Error:", EditorStyles.boldLabel);
-                    scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, EditorStyles.helpBox, GUILayout.ExpandHeight(true));
                     EditorGUILayout.HelpBox(UnityMCPConnection.LastErrorMessage, MessageType.Error);
-                    EditorGUILayout.EndScrollView();
                 }
-
-                // Auto-repaint to update status
-                Repaint();
             }
             catch (Exception e)
             {
                 EditorGUILayout.HelpBox($"Error in debug window: {e.Message}", MessageType.Error);
             }
         }
+
+        // Remove the old Update method as we're using EditorApplication.update instead
     }
 }
