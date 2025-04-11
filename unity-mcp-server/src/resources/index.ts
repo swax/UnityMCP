@@ -1,11 +1,11 @@
-import { UdonScriptExample } from "./UdonScriptExample.js";
+import { VRChatWorldNotes } from "./VRChatWorldNotes.js";
 import { Resource } from "./types.js";
 
 export * from "./types.js";
 
 export function getAllResources(): Resource[] {
   return [
-    new UdonScriptExample(),
+    new VRChatWorldNotes(),
     // Add more resources here as they are implemented
   ];
 }

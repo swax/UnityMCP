@@ -150,15 +150,15 @@ namespace UnityMCP.Editor
                 (webSocket.State == WebSocketState.Connecting ||
                  webSocket.State == WebSocketState.Open))
             {
-                Debug.Log("[UnityMCP] Already connected or connecting");
+                // Debug.Log("[UnityMCP] Already connected or connecting");
                 return;
             }
 
             try
             {
                 Debug.Log($"[UnityMCP] Attempting to connect to MCP Server at {serverUri}");
-                Debug.Log($"[UnityMCP] Current Unity version: {Application.unityVersion}");
-                Debug.Log($"[UnityMCP] Current platform: {Application.platform}");
+                // Debug.Log($"[UnityMCP] Current Unity version: {Application.unityVersion}");
+                // Debug.Log($"[UnityMCP] Current platform: {Application.platform}");
 
                 webSocket = new ClientWebSocket();
                 webSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
@@ -185,20 +185,20 @@ namespace UnityMCP.Editor
             {
                 lastErrorMessage = $"[UnityMCP] WebSocket error: {we.Message}\nDetails: {we.InnerException?.Message}";
                 Debug.LogError(lastErrorMessage);
-                Debug.LogError($"[UnityMCP] Stack trace: {we.StackTrace}");
+                // Debug.LogError($"[UnityMCP] Stack trace: {we.StackTrace}");
                 isConnected = false;
             }
             catch (Exception e)
             {
                 lastErrorMessage = $"[UnityMCP] Failed to connect to MCP Server: {e.Message}\nType: {e.GetType().Name}";
                 Debug.LogError(lastErrorMessage);
-                Debug.LogError($"[UnityMCP] Stack trace: {e.StackTrace}");
+                // Debug.LogError($"[UnityMCP] Stack trace: {e.StackTrace}");
                 isConnected = false;
             }
         }
 
         private static float reconnectTimer = 0f;
-        private static readonly float reconnectInterval = 5f;
+        private static readonly float reconnectInterval = 1000f;
 
         private static void Update()
         {

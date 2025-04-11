@@ -69,7 +69,7 @@ namespace UnityMCP.Editor
 
                 // Server URI with background
                 EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
-                EditorGUILayout.LabelField("Server URI:", GUILayout.Width(120));
+                EditorGUILayout.LabelField("MCP Server URI:", GUILayout.Width(120));
                 EditorGUILayout.SelectableLabel(UnityMCPConnection.ServerUri.ToString(), EditorStyles.textField, GUILayout.Height(20));
                 EditorGUILayout.EndHorizontal();
 
