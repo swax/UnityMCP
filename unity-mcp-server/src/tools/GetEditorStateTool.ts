@@ -6,7 +6,7 @@ export class GetEditorStateTool implements Tool {
     return {
       name: "get_editor_state",
       description:
-        "Retrieve the current state of the Unity Editor, including active GameObjects, selection state, play mode status, scene hierarchy, and project structure. This tool provides a comprehensive snapshot of the editor's current context.",
+        "Retrieve the current state of the Unity Editor, including active GameObjects, selection state, play mode status, scene hierarchy, project structure, and assets in the Assets/Game/ folder. This tool provides a comprehensive snapshot of the editor's current context.",
       category: "Editor State",
       tags: ["unity", "editor", "state", "hierarchy", "project"],
       inputSchema: {

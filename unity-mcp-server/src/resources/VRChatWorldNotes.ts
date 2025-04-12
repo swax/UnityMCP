@@ -21,6 +21,7 @@ const vrChatWorldBuildingNotes = `
 ## General notes
 
 This is a VRChat World Unity project that uses UdonSharp for scripting.
+Put all new assets in the Assets/Game/ folder.
 
 Before making edits make sure you understand what already exists by examining what you need from the project.
 
@@ -31,6 +32,52 @@ If not sure, ask the user to clarify what they want to do.
 
 Don't end lines with \\ to continue a string to the next line as that is not valid C#.
 
+If there are other assemblies you need, or if you think is there a fundamental problem
+with execute_editor_command, then stop executing and alert the user who can update the 
+execute_editor_command scoftware. Ideally with a suggestion of what to do.
+
+Context space for a single session is limited. If tasks can be broken out into sub jobs then  
+describe the prompt to the user and the user will run the job separately, 
+returning to the main job when complete.
+
+## Unity UdonSharp Editor Integration Reference
+
+Namespace and Assembly References
+- Include using VRC.Udon.Common.Interfaces; when working with UdonBehaviour
+- Include using UnityEditor.SceneManagement; for EditorSceneManager
+- Include using VRC.Udon; for core Udon types
+- Avoid direct use of UdonSharpEditorUtility from editor commands
+
+Asset Loading and Creation
+- Use AssetDatabase.LoadAssetAtPath<>() for reliable asset loading
+- Check if assets exist before creating new ones
+- Use explicit asset paths like "Assets/MyScript_UdonProgram.asset"
+- Split asset creation and component wiring into separate operations
+
+UdonBehaviour Programming
+- Cast program sources to AbstractUdonProgramSource instead of interfaces
+- Direct assignment of programSource works better than complex type manipulation
+- Avoid creating UdonVariable<T> objects directly
+- Don't attempt to call complex methods like ApplyPropertiesSettings
+
+Reflection-Based Approaches
+- Use reflection to find and set fields when direct API calls fail
+- Access UdonBehaviour variables through reflection:
+  - Get programs field with reflection (BindingFlags.NonPublic | BindingFlags.Instance)
+  - Navigate to publicVariables field through reflection
+- For UdonSharpProgramAssets, use reflection to:
+  - Find the UdonSharpProgramAsset type
+  - Access and set the sourceCsScript field
+  - Create and save the asset properly
+
+Workflow Best Practices
+- Perform operations in stages: create assets → assign program sources → set fields → link components
+- Use thorough error handling with full stack traces to identify API issues
+- Avoid complex serialization or object manipulation
+- Avoid trying to generate paths dynamically
+
+If you'd like to revise these notes. Alert the user and ask them to update the notes.
+
 ## Rendering text
 
 In Udon you can't use the legacy Unity TextMesh (or UI.Text) component directly because 
@@ -38,55 +85,6 @@ many of its methods and properties aren't exposed to Udon. Instead, you'll need 
 a TextMeshPro-based component that is supported by VRChat's Udon.
 
 If TextMeshPro is not installed, you can install it via the Unity Package Manager or prompt th user to do so.
-
-
-## These are the current assemblies included for execute_editor_command:
-
-AddAssemblyReference(typeof(UnityEngine.Object).Assembly.Location);
-AddAssemblyReference(typeof(UnityEditor.Editor).Assembly.Location);
-
-
-AddAssemblyReference(typeof(System.Linq.Enumerable).Assembly.Location); // Add System.Core for LINQ
-AddAssemblyReference(typeof(object).Assembly.Location); // Add mscorlib
-
-// Add netstandard assembly
-var netstandardAssembly = AppDomain.CurrentDomain.GetAssemblies()
-    .FirstOrDefault(a => a.GetName().Name == "netstandard");
-if (netstandardAssembly != null)
-{
-    AddAssemblyReference(netstandardAssembly.Location);
-}
-
-// Add common Unity modules
-var commonModules = new[] {
-    "UnityEngine.CoreModule",
-    "UnityEngine.PhysicsModule",
-    "UnityEngine.IMGUIModule",
-    "UnityEngine.AnimationModule",
-    "UnityEngine.UIModule",
-    "UnityEngine.TextRenderingModule",
-    "Unity.TextMeshPro",       // Added for TextMeshPro
-    "Unity.TextMeshPro.Editor" // Added for TextMeshPro Editor functionality
-};
-
-// Add VRChat Udon and UdonSharp assemblies
-var vrchatAssemblies = new[] {
-    "VRC.Udon",
-    "VRC.Udon.Common",
-    "VRC.Udon.Editor",
-    "VRC.Udon.Serialization.OdinSerializer",
-    "VRC.Udon.VM",
-    "VRC.Udon.Wrapper",
-    "UdonSharp.Editor",
-    "UdonSharp.Runtime",
-    "VRCSDK3",
-    "VRCSDKBase", // Additional VRC SDK parts that might be needed
-};
-
-If there are other assemblies you need, or if you think is there a fundamental problem
-with execute_editor_command, then stop executing and alert the user who can update the 
-execute_editor_command scoftware. Ideally with a suggestion of what to do.
-
 
 ## Creating UdonSharp assets and wiring them up is very failure prone. It is strongly suggested that you use this method.
 
@@ -219,4 +217,117 @@ public class EditorCommand
 
         return success;
     }
-}`;
+}
+    
+# VRChat Components Reference
+
+Further documenation can be found here https://creators.vrchat.com/worlds/components/
+If you're not sure, look it up first to avoid compile errors. 
+
+## Udon (VRC.Udon)
+- **UdonBehaviour**
+  - Properties: programSource, publicVariables, DisableInteractive, InteractionText, SyncMethod
+  - Methods: SetProgramVariable(), GetProgramVariable<T>(), SendCustomEvent(), SendCustomNetworkEvent()
+
+- **UdonManager**
+  - Properties: DebugLogging, HasLoaded
+  - Methods: GetUdonBehavioursInScene(), SetUdonEnabled()
+
+## SDK3 Components (VRC.SDK3.Components)
+- **VRCObjectSync**
+  - Properties: AllowCollisionOwnershipTransfer
+  - Methods: FlagDiscontinuity(), Respawn(), SetKinematic(), SetGravity(), TeleportTo()
+
+- **VRCPickup**
+  - Methods: Drop(), GenerateHapticEvent()
+
+- **VRCStation**
+  - Properties: disableStationExit, canUseStationFromStation
+  - Events: OnLocalPlayerEnterStation, OnLocalPlayerExitStation
+
+- **VRCMirrorReflection**
+  - Properties: cameraClearFlags, customClearColor, customSkybox
+
+- **VRCObjectPool**
+  - Properties: Pool
+  - Methods: TryToSpawn(), Return(), Shuffle()
+
+- **VRCAvatarPedestal**
+  - Methods: SwitchAvatar()
+
+- **VRCSceneDescriptor**
+  - Properties: PlayerPersistence, NavigationAreas
+
+- **VRCPortalMarker**
+
+- **VRCUiShape**
+
+- **VRCSpatialAudioSource**
+
+## Video Components (VRC.SDK3.Video.Components)
+- **VRCUnityVideoPlayer**
+  - Properties: IsPlaying, IsReady, Loop
+  - Methods: PlayURL(), LoadURL(), Play(), Pause(), Stop(), GetTime(), SetTime()
+
+- **VRCAVProVideoPlayer** (VRC.SDK3.Video.Components.AVPro)
+  - Properties: AutoPlay, Loop, MaximumResolution, UseLowLatency
+  - Methods: PlayURL(), LoadURL(), Play(), Pause(), Stop(), GetTime(), SetTime()
+
+- **VRCAVProVideoScreen** (VRC.SDK3.Video.Components.AVPro)
+  - Properties: VideoPlayer, MaterialIndex, TextureProperty, UseSharedMaterial
+
+- **VRCAVProVideoSpeaker** (VRC.SDK3.Video.Components.AVPro)
+  - Properties: VideoPlayer, Mode
+
+## Dynamics Components (VRC.Dynamics)
+- **ContactReceiver**
+  - Properties: parameter, receiverType, allowSelf, allowOthers, minVelocity
+  - Methods: IsColliding()
+
+- **ContactSender**
+  - Properties: radius
+
+- **PhysBoneManager**
+  - Methods: GetChains(), GetGrabs()
+
+## PhysBone Components (VRC.SDK3.Dynamics.PhysBone.Components)
+- **VRCPhysBone**
+  - Properties: rootTransform, endpointPosition, pull, spring, immobileType
+
+- **VRCPhysBoneCollider**
+  - Properties: radius, height, boundingBox, shapeType
+
+## Constraint Components (VRC.SDK3.Dynamics.Constraint.Components)
+- **VRCAimConstraint**
+  - Properties: AffectsRotationX/Y/Z, AimAxis, UpAxis
+
+- **VRCLookAtConstraint**
+  - Properties: Roll, UseUpTransform
+
+- **VRCParentConstraint**
+  - Properties: AffectsPositionX/Y/Z, AffectsRotationX/Y/Z
+
+- **VRCPositionConstraint**
+  - Properties: AffectsPositionX/Y/Z, PositionOffset
+
+- **VRCRotationConstraint**
+  - Properties: AffectsRotationX/Y/Z, RotationOffset
+
+- **VRCScaleConstraint**
+  - Properties: AffectsScaleX/Y/Z, ScaleOffset
+
+## Midi Components (VRC.SDK3.Midi)
+- **VRCMidiPlayer**
+  - Properties: midiFile, audioSource
+  - Methods: Play(), Stop()
+
+- **VRCMidiListener**
+  - Properties: activeEvents
+
+## SDK Base (VRC.SDKBase)
+- **VRC_EventHandler**
+  - Methods: TriggerEvent(), IsReadyForEvents()
+
+- **VRCCustomAction**
+  - Methods: Execute()
+`;

@@ -89,6 +89,7 @@ namespace UnityMCP.Editor
                     scenes = GetSceneNames() ?? new string[0],
                     prefabs = GetPrefabPaths() ?? new string[0],
                     scripts = GetScriptPaths() ?? new string[0]
+                    assets = GetAssetPaths("Assets/Game") ?? new string[0]
                 };
 
                 return new
@@ -110,7 +111,7 @@ namespace UnityMCP.Editor
                     selectedObjects = new List<string>(),
                     playModeState = "Unknown",
                     sceneHierarchy = new List<object>(),
-                    projectStructure = new { scenes = new string[0], prefabs = new string[0], scripts = new string[0] }
+                    projectStructure = new { scenes = new string[0], prefabs = new string[0], scripts = new string[0], assets = new string[0] }
                 };
             }
         }
@@ -258,6 +259,17 @@ namespace UnityMCP.Editor
         private static string[] GetScriptPaths()
         {
             var guids = AssetDatabase.FindAssets("t:Script");
+            var paths = new string[guids.Length];
+            for (int i = 0; i < guids.Length; i++)
+            {
+                paths[i] = AssetDatabase.GUIDToAssetPath(guids[i]);
+            }
+            return paths;
+        }
+
+        private static string[] GetAssetPaths(string folder)
+        {
+            var guids = AssetDatabase.FindAssets("", new[] { "Assets/Game" });
             var paths = new string[guids.Length];
             for (int i = 0; i < guids.Length; i++)
             {

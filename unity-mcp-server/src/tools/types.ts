@@ -12,6 +12,7 @@ export interface UnityEditorState {
     scenes?: string[];
     prefabs?: string[];
     scripts?: string[];
+    assets?: string[];
     [key: string]: string[] | undefined;
   };
 }

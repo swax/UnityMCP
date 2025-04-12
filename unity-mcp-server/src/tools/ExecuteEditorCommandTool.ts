@@ -19,25 +19,6 @@ The code has access to all UnityEditor and UnityEngine APIs.
 Include any necessary using directives at the top of the code.
 The code must have a EditorCommand class with a static Execute method that returns an object.`,
             minLength: 1,
-            examples: [
-              `using UnityEngine;
-using UnityEditor;
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-
-public class EditorCommand
-{
-    public static object Execute()
-    {
-        Selection.activeGameObject.transform.position = Vector3.zero;
-        EditorApplication.isPlaying = !EditorApplication.isPlaying;
-        return ""Success"";
-    }
-}`,
-            ],
           },
         },
         required: ["code"],
@@ -70,7 +51,23 @@ public class EditorCommand
         {
           description: "Center selected object",
           input: {
-            code: "var selected = Selection.activeGameObject; if(selected != null) { selected.transform.position = Vector3.zero; }",
+            code: `using UnityEngine;
+using UnityEditor;
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+
+public class EditorCommand
+{
+  public static object Execute()
+  {
+      Selection.activeGameObject.transform.position = Vector3.zero;
+      EditorApplication.isPlaying = !EditorApplication.isPlaying;
+      return ""Success"";
+  }
+}`,
           },
           output:
             '{ "result": true, "logs": ["[UnityMCP] Command executed successfully"] }',
