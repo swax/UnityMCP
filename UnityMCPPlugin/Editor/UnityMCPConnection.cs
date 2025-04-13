@@ -232,7 +232,7 @@ namespace UnityMCP.Editor
                         if (result.EndOfMessage)
                         {
                             var message = Encoding.UTF8.GetString(messageBuffer.ToArray());
-                            HandleMessage(message);
+                            await HandleMessage(message);
                             messageBuffer.Clear();
                         }
                         // Otherwise, continue receiving the rest of the message
@@ -254,24 +254,18 @@ namespace UnityMCP.Editor
             }
         }
 
-        private static void HandleMessage(string message)
+        private static async Task HandleMessage(string message)
         {
             try
             {
                 var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(message);
                 switch (data["type"].ToString())
                 {
-                    case "selectGameObject":
-                        SelectGameObject(data["data"].ToString());
-                        break;
-                    case "togglePlayMode":
-                        TogglePlayMode();
-                        break;
                     case "executeEditorCommand":
-                        EditorCommandExecutor.ExecuteEditorCommand(webSocket, cts.Token, data["data"].ToString());
+                        await EditorCommandExecutor.ExecuteEditorCommand(webSocket, cts.Token, data["data"].ToString());
                         break;
                     case "getEditorState":
-                        editorStateReporter.SendEditorState(webSocket, cts.Token);
+                        await editorStateReporter.SendEditorState(webSocket, cts.Token);
                         break;
                 }
             }
@@ -279,24 +273,6 @@ namespace UnityMCP.Editor
             {
                 Debug.LogError($"Error handling message: {e.Message}");
             }
-        }
-
-        private static void SelectGameObject(string objectPath)
-        {
-            var obj = GameObject.Find(objectPath);
-            if (obj != null)
-            {
-                Selection.activeGameObject = obj;
-            }
-            else
-            {
-                Debug.LogWarning($"GameObject not found: {objectPath}");
-            }
-        }
-
-        private static void TogglePlayMode()
-        {
-            EditorApplication.isPlaying = !EditorApplication.isPlaying;
         }
     }
 }

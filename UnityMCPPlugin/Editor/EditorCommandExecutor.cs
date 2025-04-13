@@ -9,6 +9,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Microsoft.CSharp;
 using System.CodeDom.Compiler;
+using System.Threading.Tasks;
 
 namespace UnityMCP.Editor
 {
@@ -19,7 +20,7 @@ namespace UnityMCP.Editor
             public string code { get; set; }
         }
 
-        public static async void ExecuteEditorCommand(ClientWebSocket webSocket, CancellationToken cancellationToken, string commandData)
+        public static async Task ExecuteEditorCommand(ClientWebSocket webSocket, CancellationToken cancellationToken, string commandData)
         {
             var logs = new List<string>();
             var errors = new List<string>();

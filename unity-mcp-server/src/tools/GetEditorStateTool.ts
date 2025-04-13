@@ -35,7 +35,7 @@ export class GetEditorStateTool implements Tool {
     return {
       name: "get_editor_state",
       description:
-        "Retrieve the current state of the Unity Editor, including active GameObjects, selection state, play mode status, scene hierarchy, project structure, and assets in the Assets/Game/ folder. This tool provides a comprehensive snapshot of the editor's current context.",
+        "Retrieve the current state of the Unity Editor, including active GameObjects, selection state, play mode status, scene hierarchy, project structure, and assets. This tool provides a comprehensive snapshot of the editor's current context.",
       category: "Editor State",
       tags: ["unity", "editor", "state", "hierarchy", "project"],
       inputSchema: {
@@ -43,9 +43,9 @@ export class GetEditorStateTool implements Tool {
         properties: {
           format: {
             type: "string",
-            enum: ["Raw", "scripts only", "no scripts"],
+            enum: ["Raw"],
             description:
-              "Specify the output format:\n- Raw: Complete editor state including all available data\n- scripts only: Returns only the list of script files in the project\n- no scripts: Returns everything except script-related information",
+              "Specify the output format:\n- Raw: Complete editor state including all available data",
             default: "Raw",
           },
         },
@@ -56,26 +56,21 @@ export class GetEditorStateTool implements Tool {
         description:
           "Returns a JSON object containing the requested editor state information",
         format:
-          "The response format varies based on the format parameter:\n- Raw: Full UnityEditorState object\n- scripts only: Array of script file paths\n- no scripts: UnityEditorState minus script-related fields",
+          "The response format varies based on the format parameter:\n- Raw: Full UnityEditorState object",
       },
       examples: [
         {
           description: "Get complete editor state",
-          input: {},
+          input: { format: "Raw" },
           output:
             '{ "activeGameObjects": ["Main Camera", "Directional Light"], ... }',
-        },
-        {
-          description: "Get only script files",
-          input: { format: "scripts only" },
-          output: '["Assets/Scripts/Player.cs", "Assets/Scripts/Enemy.cs"]',
         },
       ],
     };
   }
 
   async execute(args: any, context: ToolContext) {
-    const validFormats = ["Raw", "scripts only", "no scripts"];
+    const validFormats = ["Raw"];
     const format = (args?.format as string) || "Raw";
 
     if (args?.format && !validFormats.includes(format)) {
@@ -116,37 +111,12 @@ export class GetEditorStateTool implements Tool {
         ),
       ]);
 
-      // Get logs that occurred during command execution
-      const commandLogs = context.logBuffer
-        .slice(startLogIndex)
-        .filter((log) => log.message.includes("[UnityMCP]"));
-
-      // Calculate execution time
-      const executionTime = Date.now() - (unityEditorStateTime || 0);
-
       // Process the response based on format
       let responseData: any;
       switch (format) {
         case "Raw":
           responseData = editorState;
           break;
-        case "scripts only":
-          responseData = editorState.projectStructure.scripts || [];
-          break;
-        case "no scripts": {
-          const { projectStructure, ...stateWithoutScripts } = {
-            ...editorState,
-          };
-          const { scripts, ...otherStructure } = { ...projectStructure };
-          responseData = {
-            ...stateWithoutScripts,
-            projectStructure: otherStructure,
-            logs: commandLogs,
-            executionTime: `${executionTime}ms`,
-            status: "success",
-          };
-          break;
-        }
       }
 
       return {

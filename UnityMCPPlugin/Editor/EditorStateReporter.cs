@@ -84,7 +84,7 @@ namespace UnityMCP.Editor
                 var projectStructure = new
                 {
                     scenes = GetSceneNames() ?? new string[0],
-                    assets = GetAssetPaths("Assets/Game") ?? new string[0]
+                    assets = GetAssetPaths() ?? new string[0]
                 };
 
                 return new
@@ -240,9 +240,9 @@ namespace UnityMCP.Editor
             return scenes.ToArray();
         }
 
-        private static string[] GetAssetPaths(string folder)
+        private static string[] GetAssetPaths()
         {
-            var guids = AssetDatabase.FindAssets("", new[] { "Assets/Game" });
+            var guids = AssetDatabase.FindAssets("", new[] { "Assets/" });
             var paths = new string[guids.Length];
             for (int i = 0; i < guids.Length; i++)
             {
