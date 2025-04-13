@@ -171,9 +171,8 @@ namespace UnityMCP.Editor
                 Debug.Log("[UnityMCP] Successfully connected to MCP Server");
                 StartReceiving();
                 
-                // Initialize editor state and start sending updates
-                editorStateReporter = new EditorStateReporter(webSocket, cts.Token);
-                editorStateReporter.StartSendingEditorState();
+                // Initialize editor state reporter
+                editorStateReporter = new EditorStateReporter();
             }
             catch (OperationCanceledException)
             {
@@ -198,7 +197,7 @@ namespace UnityMCP.Editor
         }
 
         private static float reconnectTimer = 0f;
-        private static readonly float reconnectInterval = 1000f;
+        private static readonly float reconnectInterval = 5f;
 
         private static void Update()
         {
@@ -270,6 +269,9 @@ namespace UnityMCP.Editor
                         break;
                     case "executeEditorCommand":
                         EditorCommandExecutor.ExecuteEditorCommand(webSocket, cts.Token, data["data"].ToString());
+                        break;
+                    case "getEditorState":
+                        editorStateReporter.SendEditorState(webSocket, cts.Token);
                         break;
                 }
             }

@@ -9,10 +9,7 @@ import {
   McpError,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import {
-  CommandResultHandler,
-  UnityConnection,
-} from "./communication/UnityConnection.js";
+import { UnityConnection } from "./communication/UnityConnection.js";
 import { getAllResources, ResourceContext } from "./resources/index.js";
 import { getAllTools, ToolContext } from "./tools/index.js";
 
@@ -132,19 +129,10 @@ class UnityMCPServer {
         );
       }
 
-      // Create context object for tool execution
+      // Create context object for tool execution - simpler without command-specific properties
       const toolContext: ToolContext = {
         unityConnection: this.unityConnection,
-        editorState: this.unityConnection.getEditorState(),
         logBuffer: this.unityConnection.getLogBuffer(),
-        commandResultPromise: null,
-        commandStartTime: this.unityConnection.getCommandStartTime(),
-        setCommandResultPromise: (promise: CommandResultHandler) => {
-          this.unityConnection.setCommandResultPromise(promise);
-        },
-        setCommandStartTime: (time: number) => {
-          this.unityConnection.setCommandStartTime(time);
-        },
       };
 
       // Execute the tool

@@ -1,5 +1,39 @@
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { Tool, ToolContext, ToolDefinition } from "./types.js";
+import {
+  Tool,
+  ToolContext,
+  ToolDefinition,
+} from "./types.js";
+
+export interface CommandResult {
+  result: any;
+  logs: string[];
+  errors: string[];
+  warnings: string[];
+  executionSuccess: boolean;
+  errorDetails?: {
+    message: string;
+    stackTrace: string;
+    type: string;
+  };
+}
+
+export interface CommandResultHandler {
+  resolve: (value: CommandResult) => void;
+  reject: (reason?: any) => void;
+}
+
+// Command state management
+let commandResultPromise: CommandResultHandler | null = null;
+let commandStartTime: number | null = null;
+
+// New method to resolve the command result - called when results arrive from Unity
+export function resolveCommandResult(result: CommandResult): void {
+  if (commandResultPromise) {
+    commandResultPromise.resolve(result);
+    commandResultPromise = null;
+  }
+}
 
 export class ExecuteEditorCommandTool implements Tool {
   getDefinition(): ToolDefinition {
@@ -102,7 +136,7 @@ public class EditorCommand
     try {
       // Clear previous logs and set command start time
       const startLogIndex = context.logBuffer.length;
-      context.setCommandStartTime(Date.now());
+      commandStartTime = Date.now();
 
       // Send command to Unity
       context.unityConnection!.sendMessage("executeEditorCommand", {
@@ -113,7 +147,7 @@ public class EditorCommand
       const timeoutMs = 60_000;
       const result = await Promise.race([
         new Promise((resolve, reject) => {
-          context.setCommandResultPromise({ resolve, reject });
+          commandResultPromise = { resolve, reject };
         }),
         new Promise((_, reject) =>
           setTimeout(
@@ -136,7 +170,7 @@ public class EditorCommand
         .filter((log) => log.message.includes("[UnityMCP]"));
 
       // Calculate execution time
-      const executionTime = Date.now() - (context.commandStartTime || 0);
+      const executionTime = Date.now() - (commandStartTime || 0);
 
       return {
         content: [

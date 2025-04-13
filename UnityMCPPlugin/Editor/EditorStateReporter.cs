@@ -13,22 +13,14 @@ namespace UnityMCP.Editor
 {
     public class EditorStateReporter
     {
-        private readonly ClientWebSocket webSocket;
-        private readonly CancellationToken cancellationToken;
-        private bool isConnected = true;
         private string lastErrorMessage = "";
 
-        public EditorStateReporter(ClientWebSocket webSocket, CancellationToken cancellationToken)
+        // New method to send editor state
+        public async Task SendEditorState(ClientWebSocket webSocket, CancellationToken cancellationToken)
         {
-            this.webSocket = webSocket;
-            this.cancellationToken = cancellationToken;
-        }
-
-        public async void StartSendingEditorState()
-        {
-            while (isConnected && webSocket.State == WebSocketState.Open)
+            try
             {
-                try
+                if (webSocket?.State == WebSocketState.Open)
                 {
                     var state = GetEditorState();
                     var message = JsonConvert.SerializeObject(new
@@ -38,21 +30,26 @@ namespace UnityMCP.Editor
                     });
                     var buffer = Encoding.UTF8.GetBytes(message);
                     await webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cancellationToken);
-                    await Task.Delay(1000); // Update every second
+                    Debug.Log("[UnityMCP] Sent editor state upon request");
                 }
-                catch (Exception e)
+                else
                 {
-                    Debug.LogError($"Error sending editor state: {e.Message}");
-                    isConnected = false;
-                    break;
+                    Debug.LogWarning("[UnityMCP] Cannot send editor state - connection closed");
                 }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[UnityMCP] Error sending editor state: {e.Message}");
             }
         }
 
-        private object GetEditorState()
+        public object GetEditorState()
         {
             try
             {
+                // Wait for any ongoing Unity compilation to finish first
+                EditorUtilities.WaitForUnityCompilation();
+
                 var activeGameObjects = new List<string>();
                 var selectedObjects = new List<string>();
 
@@ -87,8 +84,6 @@ namespace UnityMCP.Editor
                 var projectStructure = new
                 {
                     scenes = GetSceneNames() ?? new string[0],
-                    prefabs = GetPrefabPaths() ?? new string[0],
-                    scripts = GetScriptPaths() ?? new string[0]
                     assets = GetAssetPaths("Assets/Game") ?? new string[0]
                 };
 
@@ -111,7 +106,7 @@ namespace UnityMCP.Editor
                     selectedObjects = new List<string>(),
                     playModeState = "Unknown",
                     sceneHierarchy = new List<object>(),
-                    projectStructure = new { scenes = new string[0], prefabs = new string[0], scripts = new string[0], assets = new string[0] }
+                    projectStructure = new { scenes = new string[0], assets = new string[0] }
                 };
             }
         }
@@ -243,28 +238,6 @@ namespace UnityMCP.Editor
                 scenes.Add(scene.path);
             }
             return scenes.ToArray();
-        }
-
-        private static string[] GetPrefabPaths()
-        {
-            var guids = AssetDatabase.FindAssets("t:Prefab");
-            var paths = new string[guids.Length];
-            for (int i = 0; i < guids.Length; i++)
-            {
-                paths[i] = AssetDatabase.GUIDToAssetPath(guids[i]);
-            }
-            return paths;
-        }
-
-        private static string[] GetScriptPaths()
-        {
-            var guids = AssetDatabase.FindAssets("t:Script");
-            var paths = new string[guids.Length];
-            for (int i = 0; i < guids.Length; i++)
-            {
-                paths[i] = AssetDatabase.GUIDToAssetPath(guids[i]);
-            }
-            return paths;
         }
 
         private static string[] GetAssetPaths(string folder)
