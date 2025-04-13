@@ -105,14 +105,6 @@ class UnityMCPServer {
 
     // Handle tool calls with enhanced validation and error handling
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      // Verify Unity connection with detailed error message
-      if (!this.unityConnection.isConnected()) {
-        throw new McpError(
-          ErrorCode.InternalError,
-          "Unity Editor is not connected. Please ensure the Unity Editor is running and the UnityMCP window is open.",
-        );
-      }
-
       const { name, arguments: args } = request.params;
 
       // Find the requested tool
@@ -129,14 +121,35 @@ class UnityMCPServer {
         );
       }
 
-      // Create context object for tool execution - simpler without command-specific properties
-      const toolContext: ToolContext = {
-        unityConnection: this.unityConnection,
-        logBuffer: this.unityConnection.getLogBuffer(),
-      };
+      // Try executing with retry logic for connection issues
+      let retryCount = 0;
+      const maxRetries = 5;
+      const retryDelay = 5000; // 5 seconds
 
-      // Execute the tool
-      return await tool.execute(args, toolContext);
+      while (true) {
+        // Verify Unity connection with detailed error message
+        if (!this.unityConnection.isConnected()) {
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.error(`Unity Editor not connected. Retrying in 5 seconds... (${retryCount}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          }
+          throw new McpError(
+            ErrorCode.InternalError,
+            "Unity Editor is not connected. Please ensure the Unity Editor is running and the UnityMCP window is open.",
+          );
+        }
+
+        // Create context object for tool execution
+        const toolContext: ToolContext = {
+          unityConnection: this.unityConnection,
+          logBuffer: this.unityConnection.getLogBuffer(),
+        };
+
+        // Execute the tool
+        return await tool.execute(args, toolContext);
+      }
     });
   }
 
