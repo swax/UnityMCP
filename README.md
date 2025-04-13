@@ -1,171 +1,46 @@
-# UnityMCP [![](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white 'LinkedIn')](https://www.linkedin.com/in/jack-w-richards/)
+Forked from [Arodoid/UnityMCP](https://github.com/Arodoid/UnityMCP/commits/main/) see that page for the
+original README.md
 
+## About 
 
+This repo was extensively refactored from the soure. I've been testing using Claude/MCP/Unity to create
+VRChat worlds. It works ok. It has trouble reliably compiling and attaching UndonSharp assets to behaviors. 
 
-[![](https://badge.mcpx.dev?type=server 'MCP Server')](https://modelcontextprotocol.io/introduction)
-[![smithery badge](https://smithery.ai/badge/@Arodoid/unitymcp)](https://smithery.ai/server/@Arodoid/unitymcp)
+### Unity Editor Integration
+- Added functionality to wait/retry when Unity is not connected to process commands
+- Changed `getEditorState` to run on demand instead of continuously
+- Implemented waiting for pending compilations when getting editor state and running commands
+- Revised GetAssets to retrieve all content from the Assets/ folder
 
-[![](https://img.shields.io/github/last-commit/Arodoid/UnityMCP 'Last Commit')](https://github.com/CoderGamester/mcp-unity/commits/main)
-<a href="https://github.com/Arodoid/UnityMCP/pulls"><img src="https://img.shields.io/github/issues-pr/Arodoid/UnityMCP" alt="Pull Requests Badge"/></a>
-<a href="https://github.com/Arodoid/UnityMCP/issues"><img src="https://img.shields.io/github/issues/Arodoid/UnityMCP" alt="Issues Badge"/></a>
-[![](https://img.shields.io/badge/License-MIT-red.svg 'MIT License')](https://opensource.org/licenses/MIT)
+### Performance Improvements
+- Fixed MCP window high CPU usage by only repainting when changes are detected
+- Enabled support for commands longer than 4KB in Unity
+- Reduced excessive debug logs during reconnection process
 
-<a href="https://github.com/Arodoid/UnityMCP/stargazers"><img src="https://img.shields.io/github/stars/Arodoid/UnityMCP" alt="Stars Badge"/></a>
-<a href="https://github.com/Arodoid/UnityMCP/network/members"><img src="https://img.shields.io/github/forks/Arodoid/UnityMCP" alt="Forks Badge"/></a>
+### Code Refactoring
+- Refactored Unity connection into its own dedicated file
+- Separated MCP server tools into individual files
+  - With a common interface to make adding new tools easier
+- Split editor state reporting and command execution into their own files
 
+### Command Execution Improvements
+- Changed how code is executed so that the LLM can define the usings, classes, and functions
+  - Allows the LLM to exectute more complex commands with multiple functions
+- Incorporated references for various modules:
+  - .Net Standard
+  - System.Core, System.IO
+  - TextMeshPro assembly
+  - VRChat assemblies
+  - Unity Physics
 
-UnityMCP is a powerful Unity Editor plugin that implements the Model Context Protocol (MCP), enabling seamless integration between Unity and AI assistants. It provides real-time editor state monitoring, remote command execution, and comprehensive logging capabilities.
+### Script Testing
+- Created a script tester for diagnosing C# script commands
+- Allows manually executing editor commands with detailed logging
 
-![UnityMCP](https://github.com/user-attachments/assets/53965337-75b8-4f0e-88d2-b2a4069546f4)
-
-## Architecture
-
-The project consists of two main components:
-
-### 1. Unity Plugin (UnityMCPPlugin)
-
-A Unity Editor plugin that provides:
-- Debug window for connection status and monitoring
-- WebSocket client for real-time communication
-- C# code execution engine
-- Comprehensive logging system
-- Editor state tracking and serialization
-
-### 2. MCP Server (unity-mcp-server)
-
-A TypeScript-based MCP server that exposes Unity Editor functionality through standardized tools:
-
-#### Available Tools
-
-1. `get_editor_state`
-   - Retrieves current Unity Editor state
-   - Includes active GameObjects, selection state, play mode status
-   - Provides scene hierarchy and project structure
-   - Supports different output formats (Raw, scripts only, no scripts)
-
-2. `execute_editor_command`
-   - Executes C# code directly in the Unity Editor
-   - Full access to UnityEngine and UnityEditor APIs
-   - Real-time execution with comprehensive error handling
-   - Command timeout protection
-
-3. `get_logs`
-   - Retrieves and filters Unity Editor logs
-   - Supports filtering by type, content, and timestamp
-   - Customizable output fields
-   - Buffer management for optimal performance
-
-## Installation
-
-### Installing via Smithery
-
-To install UnityMCP for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@Arodoid/unitymcp):
-
-```bash
-npx -y @smithery/cli install @Arodoid/unitymcp --client claude
-```
-
-### Prerequisites
-- Unity 2022.3 or later
-- Node.js 18 or later
-- npm 9 or later
-
-### Unity Plugin Setup
-
-1. Copy the `UnityMCPPlugin` folder to your Unity project's Assets directory
-2. Open Unity Editor
-3. Access the plugin through Unity's top menu bar > UnityMCP > Debug Window
-
-### MCP Server Setup
-
-```bash
-cd unity-mcp-server
-npm install
-npm run build
-```
-
-## Usage
-
-### Starting the Server
-
-```bash
-cd unity-mcp-server
-node build/index.js
-```
-
-### Connecting from Unity
-
-1. Open your Unity project
-2. Open the UnityMCP Debug Window (Window > UnityMCP > Debug Window)
-3. The plugin will automatically attempt to connect to the MCP server
-4. Monitor connection status and logs in the debug window
-
-### Example: Executing Commands
-
-```csharp
-// Center the selected object
-Selection.activeGameObject.transform.position = Vector3.zero;
-
-// Toggle play mode
-EditorApplication.isPlaying = !EditorApplication.isPlaying;
-
-// Create a new cube
-GameObject.CreatePrimitive(PrimitiveType.Cube);
-```
-
-## Development
-
-### Building the Server
-
-```bash
-cd unity-mcp-server
-npm run build
-```
-
-### Watching for Changes
-
-```bash
-npm run watch
-```
-
-### Inspecting MCP Communication
-
-```bash
-npm run inspector
-```
-
-## Technical Details
-
-### Communication Protocol
-
-- WebSocket-based communication on port 8080
-- Bidirectional real-time updates
-- JSON message format for all communications
-- Automatic reconnection handling
-
-### Security Features
-
-- Command execution timeout protection
-- Error handling and validation
-- Log buffer management
-- Connection state monitoring
-
-### Error Handling
-
-The system provides comprehensive error handling for:
-- Connection issues
-- Command execution failures
-- Compilation errors
-- Runtime exceptions
-- Timeout scenarios
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Resource Management
+- Added support for MCP resources
+- Implemented a VRChat-specific resource
+- Transitioned from VRChat notes to Unity-stored notes
 
 ## License
 
