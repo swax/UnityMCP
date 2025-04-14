@@ -1,16 +1,34 @@
 Forked from [Arodoid/UnityMCP](https://github.com/Arodoid/UnityMCP/commits/main/) see that page for the
 original README.md
 
-## About 
+## Changes 
 
 This repo was extensively refactored from the soure. I've been testing using Claude/MCP/Unity to create
-VRChat worlds. It works ok. It has trouble reliably compiling and attaching UndonSharp assets to behaviors. 
+VRChat worlds. 
+
+### Command Execution Improvements
+- Changed how code is executed so that the LLM can define the usings, classes, and functions
+  - Allows the LLM to exectute more complex commands with multiple functions
+- Incorporated references for various modules:
+  - .Net Standard
+  - System.Core, System.IO
+  - TextMeshPro assembly
+  - VRChat assemblies
+  - Unity Physics
+  - A reference to MCPUnity itself so you can provide helper functions to MCP commands
 
 ### Unity Editor Integration
 - Added functionality to wait/retry when Unity is not connected to process commands
 - Changed `getEditorState` to run on demand instead of continuously
 - Implemented waiting for pending compilations when getting editor state and running commands
 - Revised GetAssets to retrieve all content from the Assets/ folder
+
+### Manual Script Testing
+- Created a script tester for diagnosing C# script commands
+- Allows manually executing editor commands with detailed logging
+
+### MCP Resources
+- Any files added to resources/text will be exposed as a MCP resource
 
 ### Performance Improvements
 - Fixed MCP window high CPU usage by only repainting when changes are detected
@@ -23,24 +41,44 @@ VRChat worlds. It works ok. It has trouble reliably compiling and attaching Undo
   - With a common interface to make adding new tools easier
 - Split editor state reporting and command execution into their own files
 
-### Command Execution Improvements
-- Changed how code is executed so that the LLM can define the usings, classes, and functions
-  - Allows the LLM to exectute more complex commands with multiple functions
-- Incorporated references for various modules:
-  - .Net Standard
-  - System.Core, System.IO
-  - TextMeshPro assembly
-  - VRChat assemblies
-  - Unity Physics
+### VRChat Specific features
+- Added a helper script that supports generating UdonSharp asset files from C# files
 
-### Script Testing
-- Created a script tester for diagnosing C# script commands
-- Allows manually executing editor commands with detailed logging
+## How to Use
 
-### Resource Management
-- Added support for MCP resources
-- Implemented a VRChat-specific resource
-- Transitioned from VRChat notes to Unity-stored notes
+- Build the MCP Server from unity-mcp-server/
+  - `npm run install`
+  - `npm run build`
+
+- In Unity
+  - Copy over the UnityMCPPlugin/ directory into your Assets folder
+  - You should now see a UnityMCP menu in your project
+    - Select `Debug Window` and dock by your projects
+
+- In Claude Desktop
+  - Enable developer mode
+  - Add the MCP server in File/Settings
+  ```
+  {
+      "mcpServers": {
+          "unity": {
+              "command": "node",
+              "args": [
+                  "C:\\git\\UnityMCP\\unity-mcp-server\\build\\index.js"
+              ]
+          }
+      }
+  }
+  ```
+  - Verify in the UnityMCP Debug Window, the Connection Status is green/connected
+  - Enter your prompt
+    - Click the attach button below the prompt to add resource artifacts
+    - Any file you add to the resources/text folder is exposed as a resource
+      - You need to build the project and restart Claude for it to see new resources
+  - Run your prompt
+    - You should see scripts executing
+    - If there are script errors you can diagnose them in Unity
+      - The UnityMCP menu has a Script Tester where you can paste in scripts to run them manually
 
 ## License
 
