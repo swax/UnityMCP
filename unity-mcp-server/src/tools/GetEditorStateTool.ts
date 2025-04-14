@@ -91,7 +91,7 @@ export class GetEditorStateTool implements Tool {
       context.unityConnection!.sendMessage("getEditorState", {});
 
       // Wait for result with timeout handling
-      const timeoutMs = 30_000;
+      const timeoutMs = 60_000;
       const editorState = await Promise.race([
         new Promise<UnityEditorState>((resolve, reject) => {
           unityEditorStatePromise = { resolve, reject };

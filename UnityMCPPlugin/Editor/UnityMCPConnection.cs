@@ -161,7 +161,7 @@ namespace UnityMCP.Editor
                 // Debug.Log($"[UnityMCP] Current platform: {Application.platform}");
 
                 webSocket = new ClientWebSocket();
-                webSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
+                webSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(60);
 
                 var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, timeout.Token);

@@ -11,7 +11,7 @@ namespace UnityMCP.Editor
         /// </summary>
         /// <param name="timeoutSeconds">Maximum time to wait in seconds (0 means no timeout)</param>
         /// <returns>True if compilation finished, false if timed out</returns>
-        public static bool WaitForUnityCompilation(float timeoutSeconds = 30f)
+        public static bool WaitForUnityCompilation(float timeoutSeconds = 60f)
         {
             if (!EditorApplication.isCompiling)
                 return true;

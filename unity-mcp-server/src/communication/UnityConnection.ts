@@ -109,7 +109,7 @@ export class UnityConnection {
     }
   }
 
-  public async waitForConnection(timeoutMs: number = 30000): Promise<boolean> {
+  public async waitForConnection(timeoutMs: number = 60000): Promise<boolean> {
     if (this.connection) return true;
 
     return new Promise<boolean>((resolve) => {
