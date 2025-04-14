@@ -166,10 +166,12 @@ namespace UnityMCP.Editor
                 AddAssemblyReference(typeof(UnityEngine.Object).Assembly.Location);
                 AddAssemblyReference(typeof(UnityEditor.Editor).Assembly.Location);
 
-
                 AddAssemblyReference(typeof(System.Linq.Enumerable).Assembly.Location); // Add System.Core for LINQ
                 AddAssemblyReference(typeof(object).Assembly.Location); // Add mscorlib
 
+                // Add this assembly so script can use utilities we provide
+                AddAssemblyReference(typeof(UnityMCP.Editor.EditorCommandExecutor).Assembly.Location); 
+                
                 // Add netstandard assembly
                 var netstandardAssembly = AppDomain.CurrentDomain.GetAssemblies()
                     .FirstOrDefault(a => a.GetName().Name == "netstandard");
