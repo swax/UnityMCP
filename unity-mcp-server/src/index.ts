@@ -16,6 +16,7 @@ import { getAllTools, ToolContext } from "./tools/index.js";
 class UnityMCPServer {
   private server: Server;
   private unityConnection: UnityConnection;
+  private initialized = false;
 
   constructor() {
     // Initialize MCP Server
@@ -34,8 +35,6 @@ class UnityMCPServer {
 
     // Initialize WebSocket Server for Unity communication
     this.unityConnection = new UnityConnection(8080);
-    this.setupTools();
-    this.setupResources();
 
     // Error handling
     this.server.onerror = (error) => console.error("[MCP Error]", error);
@@ -45,9 +44,19 @@ class UnityMCPServer {
     });
   }
 
+  /** Initialize the server asynchronously */
+  async initialize() {
+    if (this.initialized) return;
+    
+    await this.setupResources();
+    this.setupTools();
+    
+    this.initialized = true;
+  }
+
   /** Optional resources the user can include in Claude Desktop to give additional context to the LLM */
-  private setupResources() {
-    const resources = getAllResources();
+  private async setupResources() {
+    const resources = await getAllResources();
 
     // Set up the resource request handler
     this.server.setRequestHandler(
@@ -159,6 +168,8 @@ class UnityMCPServer {
   }
 
   async run() {
+    await this.initialize();
+    
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error("Unity MCP server running on stdio");

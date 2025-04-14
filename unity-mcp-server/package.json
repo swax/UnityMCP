@@ -11,8 +11,7 @@
     "build"
   ],
   "scripts": {
-    "build": "tsc && node --input-type=module -e \"import { chmod } from 'fs/promises'; await chmod('build/index.js', '755');\"",
-    "prepare": "npm run build",
+    "build": "tsc && node scripts/copy-resources.js && node --input-type=module -e \"import { chmod } from 'fs/promises'; await chmod('build/index.js', '755');\"",
     "watch": "tsc --watch",
     "inspector": "npx @modelcontextprotocol/inspector build/index.js"
   },
