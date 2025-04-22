@@ -66,7 +66,9 @@ namespace UnityMCP.Editor
             }
             catch (Exception e)
             {
-                var error = $"[UnityMCP] Failed to execute editor command: {e.Message}\n{e.StackTrace}";
+                var firstStackLine = e.StackTrace?.Split('\n')?.FirstOrDefault() ?? "";
+
+                var error = $"[UnityMCP] Failed to execute editor command: {e.Message}\n{firstStackLine}";
                 Debug.LogError(error);
 
                 // Send back error information
@@ -83,7 +85,7 @@ namespace UnityMCP.Editor
                         errorDetails = new
                         {
                             message = e.Message,
-                            stackTrace = e.StackTrace,
+                            stackTrace = firstStackLine,
                             type = e.GetType().Name
                         }
                     }
@@ -108,7 +110,8 @@ namespace UnityMCP.Editor
                         break;
                     case LogType.Error:
                     case LogType.Exception:
-                        errors.Add($"{message}\n{stackTrace}");
+                        var firstStackLine = stackTrace?.Split('\n')?.FirstOrDefault() ?? "";
+                        errors.Add($"{message}\n{firstStackLine}");
                         break;
                 }
             }
@@ -170,8 +173,8 @@ namespace UnityMCP.Editor
                 AddAssemblyReference(typeof(object).Assembly.Location); // Add mscorlib
 
                 // Add this assembly so script can use utilities we provide
-                AddAssemblyReference(typeof(UnityMCP.Editor.EditorCommandExecutor).Assembly.Location); 
-                
+                AddAssemblyReference(typeof(UnityMCP.Editor.EditorCommandExecutor).Assembly.Location);
+
                 // Add netstandard assembly
                 var netstandardAssembly = AppDomain.CurrentDomain.GetAssemblies()
                     .FirstOrDefault(a => a.GetName().Name == "netstandard");
@@ -182,14 +185,15 @@ namespace UnityMCP.Editor
 
                 // Add common Unity modules
                 var commonModules = new[] {
-                    "UnityEngine.CoreModule",
-                    "UnityEngine.PhysicsModule",
-                    "UnityEngine.IMGUIModule",
                     "UnityEngine.AnimationModule",
-                    "UnityEngine.UIModule",
+                    "UnityEngine.CoreModule",
+                    "UnityEngine.IMGUIModule",
+                    "UnityEngine.PhysicsModule",
+                    "UnityEngine.TerrainModule",
                     "UnityEngine.TextRenderingModule",
-                    "Unity.TextMeshPro",       // Added for TextMeshPro
-                    "Unity.TextMeshPro.Editor" // Added for TextMeshPro Editor functionality
+                    "UnityEngine.UIModule",
+                    "Unity.TextMeshPro",
+                    "Unity.TextMeshPro.Editor"
                 };
 
                 foreach (var moduleName in commonModules)
@@ -215,7 +219,7 @@ namespace UnityMCP.Editor
                 {
                     AddAssemblyByName(assemblyName);
                 }
-                
+
                 // Debug.Log("Added Assembly References:" + string.join(", ", options.ReferencedAssemblies));
             }
             catch (Exception e)
@@ -229,7 +233,7 @@ namespace UnityMCP.Editor
                 var results = provider.CompileAssemblyFromSource(options, code);
                 if (results.Errors.HasErrors)
                 {
-                    Debug.LogError($"Assembly references: {string.Join(", ", options.ReferencedAssemblies)}");
+                    //Debug.LogError($"Assembly references: {string.Join(", ", options.ReferencedAssemblies)}");
                     foreach (CompilerError error in results.Errors)
                     {
                         Debug.LogError($"Error {error.ErrorNumber}: {error.ErrorText}, Line {error.Line}");
