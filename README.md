@@ -1,14 +1,20 @@
-Forked from [Arodoid/UnityMCP](https://github.com/Arodoid/UnityMCP/commits/main/) see that page for the
+Forked from [Arodoid/UnityMCP](https://github.com/Arodoid/UnityMCP) see that page for the
 original README.md
 
-## Changes 
+## About 
 
-This repo was extensively refactored from the soure. I've been testing using Claude/MCP/Unity to create
-VRChat worlds. 
+This repo has been extensively refactored from the source. I've been testing using Claude/MCP/Unity to create
+VRChat worlds. Claude has trouble getting UdonSharp scripts to compile so this repo supports 
+MCP resources and helper scripts which improves it's success rate in building VRC worlds
 
-### Command Execution Improvements
+This repo also has a many general improvements that work with normal Unity development. Try it out. 
+
+## Improvements 
+
+### Command Execution
 - Changed how code is executed so that the LLM can define the usings, classes, and functions
-  - Allows the LLM to exectute more complex commands with multiple functions
+  - Allows the LLM to execute more complex commands with multiple functions
+- Stack traces eat up a lot of context so just return the first line which is usually enough
 - Incorporated references for various modules:
   - .Net Standard
   - System.Core, System.IO
@@ -30,7 +36,7 @@ VRChat worlds.
 ### MCP Resources
 - Any files added to resources/text will be exposed as a MCP resource
 
-### Performance Improvements
+### Performance
 - Fixed MCP window high CPU usage by only repainting when changes are detected
 - Enabled support for commands longer than 4KB in Unity
 - Reduced excessive debug logs during reconnection process
