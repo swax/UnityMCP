@@ -53,7 +53,7 @@ This repo also has a many general improvements that work with normal Unity devel
 ## How to Use
 
 - Build the MCP Server from unity-mcp-server/
-  - `npm run install`
+  - `npm install`
   - `npm run build`
 
 - In Unity
